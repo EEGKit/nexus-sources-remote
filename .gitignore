@@ -1,0 +1,9 @@
+.vs/
+artifacts/
+
+doc/_site
+/**/obj
+
+*.suo
+*.user
+*.pyc

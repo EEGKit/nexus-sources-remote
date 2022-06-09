@@ -1,22 +1,20 @@
 ﻿using Nexus.DataModel;
 using Nexus.Extensibility;
-using System;
-using System.Collections.Generic;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Nexus.Extensions
 {
-    [ExtensionIdentification("Nexus.Builtin.Rpc", "Nexus RPC", "Provides access to databases via remote procedure calls.")]
-    internal class RpcDataSource : IDataSource, IDisposable
+    [ExtensionDescription(
+        "Provides access to remote databases",
+        "https://github.com/Nexusforge/nexus-sources-remote",
+        "https://github.com/Nexusforge/nexus-sources-remote")]
+    public class Remote : IDataSource, IDisposable
     {
         #region Fields
 
-        public const string Id = "Nexus.Builtin.Rpc";
         private static int API_LEVEL = 1;
-        private RpcCommunicator _communicator;
-        private IJsonRpcServer _rpcServer;
+        private RemoteCommunicator _communicator = default!;
+        private IJsonRpcServer _rpcServer = default!;
 
         #endregion
 
@@ -32,74 +30,80 @@ namespace Nexus.Extensions
          *      - ...
          *      
          * Protocols:
-         *      - simplified SignalR + binary data stream (done)
+         *      - JsonRpc + binary data stream (done)
          *      - 0mq
          *      - messagepack
          *      - gRPC
          *      - ...
          */
 
-        private DataSourceContext Context { get; set; }
+        private DataSourceContext Context { get; set; } = default!;
 
         #endregion
 
         #region Methods
 
-        public async Task SetContextAsync(DataSourceContext context, CancellationToken cancellationToken)
+        public async Task SetContextAsync(
+            DataSourceContext context, 
+            CancellationToken cancellationToken)
         {
-            this.Context = context;
+            Context = context;
 
             // command
-            if (!this.Context.Configuration.TryGetValue("command", out var command))
+            if (!Context.SourceConfiguration.TryGetValue("command", out var command))
                 throw new KeyNotFoundException("The command parameter must be provided.");
 
             // listen-address
-            if (!this.Context.Configuration.TryGetValue("listen-address", out var listenAddressString))
+            if (!Context.SourceConfiguration.TryGetValue("listen-address", out var listenAddressString))
                 throw new KeyNotFoundException("The listen-address parameter must be provided.");
 
             if (!IPAddress.TryParse(listenAddressString, out var listenAddress))
                 throw new KeyNotFoundException("The listen-address parameter is not a valid IP-Address.");
 
             // listen-port
-            if (!this.Context.Configuration.TryGetValue("listen-port", out var listenPortString))
+            if (!Context.SourceConfiguration.TryGetValue("listen-port", out var listenPortString))
                 throw new KeyNotFoundException("The listen-port parameter must be provided.");
 
             if (!ushort.TryParse(listenPortString, out var listenPort))
                 throw new KeyNotFoundException("The listen-port parameter is not a valid port.");
 
             // arguments
-            var arguments = this.Context.Configuration.ContainsKey("arguments")
-                ? this.Context.Configuration["arguments"]
+            var arguments = Context.SourceConfiguration.ContainsKey("arguments")
+                ? Context.SourceConfiguration["arguments"]
                 : string.Empty;
 
-            var timeoutTokenSource = this.GetTimeoutTokenSource(TimeSpan.FromSeconds(10));
+            var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromSeconds(10));
 
-            _communicator = new RpcCommunicator(command, arguments, listenAddress, listenPort, this.Context.Logger);
+            _communicator = new RemoteCommunicator(command, arguments, listenAddress, listenPort, Context.Logger);
             _rpcServer = await _communicator.ConnectAsync(timeoutTokenSource.Token);
 
             var apiVersion = (await _rpcServer.GetApiVersionAsync(timeoutTokenSource.Token)).ApiVersion;
 
-            if (apiVersion < 1 || apiVersion > RpcDataSource.API_LEVEL)
+            if (apiVersion < 1 || apiVersion > Remote.API_LEVEL)
                 throw new Exception($"The API level '{apiVersion}' is not supported.");
 
             await _rpcServer
-                .SetContextAsync(context.ResourceLocator.ToString(), context.Configuration, timeoutTokenSource.Token);
+                .SetContextAsync(context, timeoutTokenSource.Token);
         }
 
-        public async Task<string[]> GetCatalogIdsAsync(CancellationToken cancellationToken)
+        public async Task<CatalogRegistration[]> GetCatalogRegistrationsAsync(
+            string path,
+            CancellationToken cancellationToken)
         {
-            var timeoutTokenSource = this.GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+            var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
             cancellationToken.Register(() => timeoutTokenSource.Cancel());
 
             var response = await _rpcServer
-                .GetCatalogIdsAsync(timeoutTokenSource.Token);
+                .GetCatalogRegistrationsAsync(path, timeoutTokenSource.Token);
 
-            return response.CatalogIds;
+            return response.Registrations;
         }
 
-        public async Task<ResourceCatalog> GetCatalogAsync(string catalogId, CancellationToken cancellationToken)
+        public async Task<ResourceCatalog> GetCatalogAsync(
+            string catalogId, 
+            CancellationToken cancellationToken)
         {
-            var timeoutTokenSource = this.GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+            var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
             cancellationToken.Register(() => timeoutTokenSource.Cancel());
 
             var response = await _rpcServer
@@ -108,9 +112,11 @@ namespace Nexus.Extensions
             return response.Catalog;
         }
 
-        public async Task<(DateTime Begin, DateTime End)> GetTimeRangeAsync(string catalogId, CancellationToken cancellationToken)
+        public async Task<(DateTime Begin, DateTime End)> GetTimeRangeAsync(
+            string catalogId, 
+            CancellationToken cancellationToken)
         {
-            var timeoutTokenSource = this.GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+            var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
             cancellationToken.Register(() => timeoutTokenSource.Cancel());
 
             var response = await _rpcServer
@@ -122,9 +128,13 @@ namespace Nexus.Extensions
             return (begin, end);
         }
 
-        public async Task<double> GetAvailabilityAsync(string catalogId, DateTime begin, DateTime end, CancellationToken cancellationToken)
+        public async Task<double> GetAvailabilityAsync(
+            string catalogId, 
+            DateTime begin, 
+            DateTime end, 
+            CancellationToken cancellationToken)
         {
-            var timeoutTokenSource = this.GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+            var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
             cancellationToken.Register(() => timeoutTokenSource.Cancel());
 
             var response = await _rpcServer
@@ -133,7 +143,13 @@ namespace Nexus.Extensions
             return response.Availability;
         }
 
-        public async Task ReadAsync(DateTime begin, DateTime end, ReadRequest[] requests, IProgress<double> progress, CancellationToken cancellationToken)
+        public async Task ReadAsync(
+            DateTime begin, 
+            DateTime end, 
+            ReadRequest[] requests,
+            ReadDataHandler readData,
+            IProgress<double> progress, 
+            CancellationToken cancellationToken)
         {
             var counter = 0.0;
 
@@ -141,13 +157,13 @@ namespace Nexus.Extensions
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var timeoutTokenSource = this.GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+                var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
                 cancellationToken.Register(() => timeoutTokenSource.Cancel());
 
                 var elementCount = data.Length / catalogItem.Representation.ElementSize;
 
                 await _rpcServer
-                    .ReadSingleAsync(catalogItem.GetPath(), elementCount, begin, end, timeoutTokenSource.Token);
+                    .ReadSingleAsync(begin, end, catalogItem, timeoutTokenSource.Token);
 
                 await _communicator.ReadRawAsync(data, timeoutTokenSource.Token);
                 await _communicator.ReadRawAsync(status, timeoutTokenSource.Token);

@@ -1,9 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Nexus.DataModel;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+using Nexus.Extensibility;
 
 namespace Nexus.Extensions
 {
@@ -13,10 +10,10 @@ namespace Nexus.Extensions
             GetApiVersionAsync(CancellationToken cancellationToken);
 
         public Task 
-            SetContextAsync(string resourceLocator, Dictionary<string, string> configuration, CancellationToken cancellationToken);
+            SetContextAsync(DataSourceContext context, CancellationToken cancellationToken);
 
-        public Task<CatalogIdsResponse>
-            GetCatalogIdsAsync(CancellationToken cancellationToken);
+        public Task<CatalogRegistrationsResponse>
+            GetCatalogRegistrationsAsync(string path, CancellationToken cancellationToken);
 
         public Task<CatalogResponse>
             GetCatalogAsync(string catalogId, CancellationToken cancellationToken);
@@ -28,19 +25,19 @@ namespace Nexus.Extensions
             GetAvailabilityAsync(string catalogId, DateTime begin, DateTime end, CancellationToken cancellationToken);
 
         public Task
-            ReadSingleAsync(string resourcePath, int elementCount, DateTime begin, DateTime end, CancellationToken cancellationToken);
+            ReadSingleAsync(DateTime begin, DateTime end, CatalogItem catalogItem, CancellationToken cancellationToken);
     }
 
     internal record ApiVersionResponse(int ApiVersion);
-    internal record CatalogIdsResponse(string[] CatalogIds);
+    internal record CatalogRegistrationsResponse(CatalogRegistration[] Registrations);
     internal record CatalogResponse(ResourceCatalog Catalog);
     internal record TimeRangeResponse(DateTime Begin, DateTime End);
     internal record AvailabilityResponse(double Availability);
     internal record LogMessage(LogLevel LogLevel, string Message);
 
-    internal class RpcException : Exception
+    internal class RemoteException : Exception
     {
-        public RpcException(string message, Exception innerException = null)
+        public RemoteException(string message, Exception? innerException = default)
             : base(message, innerException)
         {
             //

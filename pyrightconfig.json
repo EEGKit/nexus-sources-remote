@@ -1,0 +1,15 @@
+{
+  "include": [
+    "src/remoting/python-remoting",
+    "tests/remoting/python-remoting-tests"
+  ],
+  "stubPath": "",
+  "executionEnvironments":[
+    {
+      "root": ".",
+      "extraPaths": [
+        "src/remoting/python-remoting"
+      ]
+    }
+  ]
+}

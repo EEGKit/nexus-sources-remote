@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(TargetFrameworkVersion)</TargetFramework>
+    <RestoreAdditionalProjectSources>
+		https://www.myget.org/F/apollo3zehn-dev/api/v3/index.json"
+	</RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nexus.Extensibility" Version="1.0.0-beta.11.66">
+      <ExcludeAssets>runtime;native</ExcludeAssets>
+    </PackageReference>
+	  
+    <PackageReference Include="StreamJsonRpc" Version="2.11.35" />
+  </ItemGroup>
+
+  <!-- This prevents the package to be rebuilt when dotnet test is executed. -->
+  <PropertyGroup Condition="$(GeneratePackage) == 'true'">
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+</Project>

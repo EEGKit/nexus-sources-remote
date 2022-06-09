@@ -1,0 +1,31 @@
+<Project>
+
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>embedded</DebugType>
+    <EmbedAllSources>true</EmbedAllSources>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+    
+  <PropertyGroup>
+    <Authors>https://github.com/Nexusforge</Authors>
+    <Company>https://github.com/Nexusforge</Company>
+    <Copyright>Nexusforge</Copyright>
+    <Product>Nexus.Sources.Remote</Product>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(Version) != ''">
+    <AssemblyVersion>$(Version.Split('.')[0]).0.0.0</AssemblyVersion>
+    <FileVersion>$(Version.Split('.')[0]).$(Version.Split('.')[1]).$(Version.Split('.')[2].Split('-')[0]).0</FileVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://nexusforge.github.io/Nexus/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Nexusforge/nexus-sources-remite</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>

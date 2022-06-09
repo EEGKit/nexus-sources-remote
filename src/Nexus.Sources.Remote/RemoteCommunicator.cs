@@ -1,20 +1,14 @@
 ﻿using Microsoft.Extensions.Logging;
-using Nexus.Utilities;
 using StreamJsonRpc;
-using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Nexus.Extensions
 {
-    internal class RpcCommunicator
+    internal class RemoteCommunicator
     {
         #region Fields
 
@@ -23,22 +17,22 @@ namespace Nexus.Extensions
 
         private SemaphoreSlim _connectSemaphore;
         private TcpListener _tcpListener;
-        private Stream _commStream;
-        private Stream _dataStream;
-        private IJsonRpcServer _rpcServer;
+        private Stream _commStream = default!;
+        private Stream _dataStream = default!;
+        private IJsonRpcServer _rpcServer = default!;
 
         private ILogger _logger;
 
         private string _command;
         private string _arguments;
 
-        private Process _process;
+        private Process _process = default!;
 
         #endregion
 
         #region Constructors
 
-        public RpcCommunicator(string command, string arguments, IPAddress listenAddress, ushort listenPort, ILogger logger)
+        public RemoteCommunicator(string command, string arguments, IPAddress listenAddress, ushort listenPort, ILogger logger)
         {
             _command = command;
             _arguments = arguments;
@@ -56,14 +50,11 @@ namespace Nexus.Extensions
 
         public async Task<IJsonRpcServer> ConnectAsync(CancellationToken cancellationToken)
         {
-            var releaseSempahore = false;
+            // only a single process can connect the tcp listener 
+            await _connectSemaphore.WaitAsync(cancellationToken);
 
             try
             {
-				// only a single process can connect the tcp listener 
-				await _connectSemaphore.WaitAsync(cancellationToken);
-                releaseSempahore = true;
-
 				// start tcp listener
                 _tcpListener.Start();
                 cancellationToken.Register(() => _tcpListener.Stop());
@@ -90,12 +81,12 @@ namespace Nexus.Extensions
                 // wait for clients to connect
                 var filters = new string[] { "comm", "data" };
 
-                Stream commStream = null;
-                Stream dataStream = null;
+                Stream? commStream = default;
+                Stream? dataStream = default;
 
                 for (int i = 0; i < 2; i++)
                 {
-                    var response = await this.GetTcpClientAsync(filters, cancellationToken);
+                    var response = await GetTcpClientAsync(filters, cancellationToken);
 
                     if (commStream is null && response.Identifier == "comm")
                         commStream = response.Client.GetStream();
@@ -145,9 +136,7 @@ namespace Nexus.Extensions
             finally
             {
                 _tcpListener.Stop();
-
-                if (releaseSempahore)
-                    _connectSemaphore.Release();
+                _connectSemaphore.Release();
             }
         }
 
@@ -155,7 +144,7 @@ namespace Nexus.Extensions
            where T : unmanaged
         {
             var memory = new CastMemoryManager<T, byte>(buffer).Memory;
-            return this.InternalReadRawAsync(memory, _dataStream, cancellationToken);
+            return InternalReadRawAsync(memory, _dataStream, cancellationToken);
         }
 
         private async Task InternalReadRawAsync(Memory<byte> buffer, Stream source, CancellationToken cancellationToken)
@@ -177,7 +166,7 @@ namespace Nexus.Extensions
             var buffer = new byte[4];
             var client = await _tcpListener.AcceptTcpClientAsync();
 
-            await this.InternalReadRawAsync(buffer, client.GetStream(), cancellationToken);
+            await InternalReadRawAsync(buffer, client.GetStream(), cancellationToken);
 
             foreach (var filter in filters)
             {
