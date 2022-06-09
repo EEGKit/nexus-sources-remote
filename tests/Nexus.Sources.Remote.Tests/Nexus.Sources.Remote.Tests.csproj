@@ -19,4 +19,25 @@
     <ProjectReference Include="..\..\src\Nexus.Sources.Remote\Nexus.Sources.Remote.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Bash\Bash.sh">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Bash\catalog.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Python\Python.py">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="TESTDATA\2020-01\2020-01-01\2020-01-01_00-00-00.dat">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="TESTDATA\2020-01\2020-01-02\2020-01-02_09-40-00.dat">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="TESTDATA\2020-01\2020-01-02\2020-01-02_09-50-00.dat">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

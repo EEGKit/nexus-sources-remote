@@ -18,12 +18,13 @@ namespace DataSource
             var dataSource = new Remote() as IDataSource;
 
             var context = new DataSourceContext(
-                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "..", "TESTDATA")),
                 SystemConfiguration: new Dictionary<string, string>(),
                 SourceConfiguration: new Dictionary<string, string>() 
                 { 
-                    ["command"] = "python.exe",
-                    ["arguments"] = "Remote.py 44444",
+                    ["command"] = "python",
+                    ["arguments"] = "Python/Python.py 44444",
+                    ["environment-variables"] = $"PYTHONPATH={Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}",
                     ["listen-address"] = "127.0.0.1",
                     ["listen-port"] = "44444",
                 },
@@ -89,12 +90,13 @@ namespace DataSource
             var dataSource = new Remote() as IDataSource;
 
             var context = new DataSourceContext(
-                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "..", "TESTDATA")),
                 SystemConfiguration: new Dictionary<string, string>(),
                 SourceConfiguration: new Dictionary<string, string>()
                 {
-                    ["command"] = "python.exe",
-                    ["arguments"] = "Remote.py 44444",
+                    ["command"] = "python",
+                    ["arguments"] = "Python/Python.py 44444",
+                    ["environment-variables"] = $"PYTHONPATH={Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "src", "remoting", "python-remoting")}",
                     ["listen-address"] = "127.0.0.1",
                     ["listen-port"] = "44444",
                 },
@@ -116,12 +118,13 @@ namespace DataSource
             var dataSource = new Remote() as IDataSource;
 
             var context = new DataSourceContext(
-                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "..", "TESTDATA")),
                 SystemConfiguration: new Dictionary<string, string>(),
                 SourceConfiguration: new Dictionary<string, string>()
                 {
-                    ["command"] = "python.exe",
-                    ["arguments"] = "Remote.py 44444",
+                    ["command"] = "python",
+                    ["arguments"] = "Python/Python.py 44444",
+                    ["environment-variables"] = $"PYTHONPATH={Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "src", "remoting", "python-remoting")}",
                     ["listen-address"] = "127.0.0.1",
                     ["listen-port"] = "44444",
                 },
@@ -144,12 +147,13 @@ namespace DataSource
             var dataSource = new Remote() as IDataSource;
 
             var context = new DataSourceContext(
-                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "..", "TESTDATA")),
                 SystemConfiguration: new Dictionary<string, string>(),
                 SourceConfiguration: new Dictionary<string, string>()
                 {
-                    ["command"] = "python.exe",
-                    ["arguments"] = "Remote.py 44444",
+                    ["command"] = "python",
+                    ["arguments"] = "Python/Python.py 44444",
+                    ["environment-variables"] = $"PYTHONPATH={Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "src", "remoting", "python-remoting")}",
                     ["listen-address"] = "127.0.0.1",
                     ["listen-port"] = "44444",
                 },
@@ -204,12 +208,13 @@ namespace DataSource
             var dataSource = new Remote() as IDataSource;
 
             var context = new DataSourceContext(
-                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "..", "TESTDATA")),
                 SystemConfiguration: new Dictionary<string, string>(),
                 SourceConfiguration: new Dictionary<string, string>()
                 {
-                    ["command"] = "python.exe",
-                    ["arguments"] = "PythonRemote.py 44444",
+                    ["command"] = "python",
+                    ["arguments"] = "Python/Python.py 44444",
+                    ["environment-variables"] = $"PYTHONPATH={Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "src", "remoting", "python-remoting")}",
                     ["listen-address"] = "127.0.0.1",
                     ["listen-port"] = "44444",
                 },

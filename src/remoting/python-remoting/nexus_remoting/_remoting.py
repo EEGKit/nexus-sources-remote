@@ -7,11 +7,37 @@ from threading import Lock
 from typing import Any, Dict, cast
 from urllib.parse import urlparse
 
-from nexus_extensibility import DataSourceContext, IDataSource, ReadRequest
+from nexus_extensibility import (CatalogItem, DataSourceContext,
+                                 ExtensibilityUtilities, IDataSource, ILogger,
+                                 LogLevel, ReadRequest)
 
+
+class _Logger(ILogger):
+
+    _tcpCommSocket: socket.socket
+    _lock: Lock
+
+    def __init__(self, tcp_socket: socket.socket, lock: Lock):
+        self._tcpCommSocket = tcp_socket
+        self._lock = lock
+
+    def log(self, log_level: LogLevel, message: str):
+
+        notification = {
+            "jsonrpc": "2.0",
+            "method": "log",
+            "params": [log_level.name, message]
+        }
+
+        jsonResponse = json.dumps(notification, default=lambda x: _serialize_json(x), ensure_ascii = False)
+        encodedResponse = jsonResponse.encode()
+
+        with self._lock:
+            self._tcpCommSocket.sendall(struct.pack(">I", len(encodedResponse)))
+            self._tcpCommSocket.sendall(encodedResponse)
 
 class RemoteCommunicator:
-    """The remote communicator."""
+    """A remote communicator."""
 
     def __init__(self, data_source: IDataSource, address: str, port: int):
         """
@@ -77,7 +103,7 @@ class RemoteCommunicator:
                 if "id" in request:
 
                     try:
-                        (result, data, status) = await self._processInvocationAsync(request)
+                        (result, data, status) = await self._process_invocation(request)
 
                         response = {
                             "result": result
@@ -102,7 +128,7 @@ class RemoteCommunicator:
             response["id"] = request["id"]
 
             # send response
-            json_response = json.dumps(response, default=lambda x: self._serializeJson(x), ensure_ascii = False)
+            json_response = json.dumps(response, default=lambda x: _serialize_json(x), ensure_ascii = False)
             encoded_response = json_response.encode()
 
             with self._lock:
@@ -114,7 +140,7 @@ class RemoteCommunicator:
                 self._tcp_data_socket.sendall(data)
                 self._tcp_data_socket.sendall(status)
 
-    async def _processInvocationAsync(self, request: dict[str, Any]):
+    async def _process_invocation(self, request: dict[str, Any]):
         
         result = None
         data = None
@@ -135,7 +161,7 @@ class RemoteCommunicator:
             system_configuration = cast(Dict[str, str], params[1])
             source_configuration = cast(Dict[str, str], params[2])
             request_configuration = cast(Dict[str, str], params[3])
-            logger = Logger(self._tcp_comm_socket, self._lock)
+            logger = _Logger(self._tcp_comm_socket, self._lock)
 
             context = DataSourceContext(
                 resource_locator, 
@@ -189,7 +215,8 @@ class RemoteCommunicator:
 
             begin = datetime.strptime(params[0], "%Y-%m-%dT%H:%M:%SZ")
             end = datetime.strptime(params[1], "%Y-%m-%dT%H:%M:%SZ")
-            catalog_item = params[3]
+            catalog_item = cast(CatalogItem, params[3])
+            (data, status) = ExtensibilityUtilities.create_buffers(catalog_item.representation, begin, end)
             read_request = ReadRequest(catalog_item, data, status)
 
             await self._data_source.read_async(begin, end, [read_request], cast(Any, None), cast(Any, None))
@@ -208,16 +235,16 @@ class RemoteCommunicator:
     def _shutdown(self):
         exit()
 
-    def _serializeJson(self, x):
+def _serialize_json(x):
 
-        if isinstance(x, enum.Enum):
-            return x._name_
+    if isinstance(x, enum.Enum):
+        return x._name_
 
-        if isinstance(x, timedelta):
-            return str(x)
+    if isinstance(x, timedelta):
+        return str(x)
 
-        if isinstance(x, datetime):
-            return x.isoformat()
+    if isinstance(x, datetime):
+        return x.isoformat()
 
-        else:
-            return {key.lstrip('_'): value for key, value in vars(x).items()}
+    else:
+        return {key.lstrip('_'): value for key, value in vars(x).items()}

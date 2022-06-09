@@ -25,6 +25,7 @@ namespace Nexus.Extensions
 
         private string _command;
         private string _arguments;
+        private Dictionary<string, string> _environmentVariables;
 
         private Process _process = default!;
 
@@ -32,10 +33,17 @@ namespace Nexus.Extensions
 
         #region Constructors
 
-        public RemoteCommunicator(string command, string arguments, IPAddress listenAddress, ushort listenPort, ILogger logger)
+        public RemoteCommunicator(
+            string command, 
+            string arguments, 
+            Dictionary<string, string> environmentVariables, 
+            IPAddress listenAddress,
+            ushort listenPort,
+            ILogger logger)
         {
             _command = command;
             _arguments = arguments;
+            _environmentVariables = environmentVariables;
             _logger = logger;
 
             var endpoint = $"{listenAddress}:{listenPort}";
@@ -64,6 +72,11 @@ namespace Nexus.Extensions
                 {
                     Arguments = _arguments,
                 };
+
+                foreach (var variable in _environmentVariables)
+                {
+                    psi.EnvironmentVariables[variable.Key] = variable.Value;
+                }
 
                 psi.RedirectStandardError = true;
 

@@ -72,9 +72,23 @@ namespace Nexus.Extensions
                 ? Context.SourceConfiguration["arguments"]
                 : string.Empty;
 
+            // arguments
+            var environmentVariablesRaw = Context.SourceConfiguration.ContainsKey("environment-variables")
+                ? Context.SourceConfiguration["environment-variables"]
+                : string.Empty;
+
+            var environmentVariables = environmentVariablesRaw.Split(";").Select(entry => 
+            {
+                var parts = entry.Split("=");
+                var key = parts[0];
+                var value = parts[1];
+
+                return (key, value);
+            }).ToDictionary(entry => entry.key, entry => entry.value);
+
             var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromSeconds(10));
 
-            _communicator = new RemoteCommunicator(command, arguments, listenAddress, listenPort, Context.Logger);
+            _communicator = new RemoteCommunicator(command, arguments, environmentVariables, listenAddress, listenPort, Context.Logger);
             _rpcServer = await _communicator.ConnectAsync(timeoutTokenSource.Token);
 
             var apiVersion = (await _rpcServer.GetApiVersionAsync(timeoutTokenSource.Token)).ApiVersion;
