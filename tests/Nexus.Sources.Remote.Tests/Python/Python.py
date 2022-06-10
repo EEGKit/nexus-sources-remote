@@ -15,14 +15,14 @@ from nexus_remoting import RemoteCommunicator
 
 class PythonDataSource(IDataSource):
     
-    async def set_context_async(self, context):
+    async def set_context_async(self, context, logger):
         
         self._context: DataSourceContext = context
 
         if (context.resource_locator.scheme != "file"):
             raise Exception(f"Expected 'file' URI scheme, but got '{context.resource_locator.scheme}'.")
 
-        context.logger.log(LogLevel.Information, "Logging works!")
+        logger.log(LogLevel.Information, "Logging works!")
 
     async def get_catalog_registrations_async(self, path: str):
 
@@ -42,37 +42,37 @@ class PythonDataSource(IDataSource):
             representation = Representation(NexusDataType.INT64, timedelta(seconds=1))
 
             resource1 = ResourceBuilder("resource1") \
-                .WithUnit("°C") \
-                .WithGroups(["group1"]) \
-                .AddRepresentation(representation) \
-                .Build()
+                .with_unit("°C") \
+                .with_groups(["group1"]) \
+                .add_representation(representation) \
+                .build()
 
             representation = Representation(NexusDataType.FLOAT64, timedelta(seconds=1))
 
             resource2 = ResourceBuilder("resource2") \
-                .WithUnit("bar") \
-                .WithGroups(["group2"]) \
-                .AddRepresentation(representation) \
-                .Build()
+                .with_unit("bar") \
+                .with_groups(["group2"]) \
+                .add_representation(representation) \
+                .build()
 
             catalog = ResourceCatalogBuilder("/A/B/C") \
-                .WithProperty("a", "b") \
-                .AddResources([resource1, resource2]) \
-                .Build()
+                .with_property("a", "b") \
+                .add_resources([resource1, resource2]) \
+                .build()
 
         elif (catalog_id == "/D/E/F"):
 
             representation = Representation(NexusDataType.FLOAT32, timedelta(seconds=1))
 
             resource = ResourceBuilder("resource1") \
-                .WithUnit("m/s") \
-                .WithGroups(["group1"]) \
-                .AddRepresentation(representation) \
-                .Build()
+                .with_unit("m/s") \
+                .with_groups(["group1"]) \
+                .add_representation(representation) \
+                .build()
 
             catalog = ResourceCatalogBuilder("/D/E/F") \
-                .AddResource(resource) \
-                .Build()
+                .add_resource(resource) \
+                .build()
 
         else:
             raise Exception("Unknown catalog ID.")
@@ -104,7 +104,7 @@ class PythonDataSource(IDataSource):
         date_times = [datetime.strptime(fileName, '%Y-%m-%d_%H-%M-%S.dat') for fileName in file_names]
         filtered_date_times = [current for current in date_times if current >= begin and current < end]
         actual_file_count = len(filtered_date_times)
-
+        
         return actual_file_count / max_file_count
 
     async def read_async(self, 
@@ -126,7 +126,6 @@ class PythonDataSource(IDataSource):
         # ...
         # The data itself is made up of progressing timestamps (unix time represented 
         # stored as 8 byte little-endian integers) with a sample rate of 1 Hz.
-
         for request in requests:
         
             samples_per_second = int(1 / request.catalog_item.representation.sample_period.total_seconds())

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Serialization;
 using StreamJsonRpc;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -114,7 +115,19 @@ namespace Nexus.Extensions
                 _commStream = commStream;
                 _dataStream = dataStream;
 
-                var messageHandler = new LengthHeaderMessageHandler(commStream, commStream, new JsonMessageFormatter());
+                var formatter = new JsonMessageFormatter()
+                {
+                    JsonSerializer = { 
+                        ContractResolver = new DefaultContractResolver
+                        {
+                            NamingStrategy = new CamelCaseNamingStrategy()
+                        }
+                    }
+                };
+
+                formatter.JsonSerializer.Converters.Add(new JsonElementConverter());
+
+                var messageHandler = new LengthHeaderMessageHandler(commStream, commStream, formatter);
                 var jsonRpc = new JsonRpc(messageHandler);
 
                 jsonRpc.AddLocalRpcMethod("log", new Action<LogLevel, string>((logLevel, message) =>

@@ -7,7 +7,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
     <EmbedAllSources>true</EmbedAllSources>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
     
   <PropertyGroup>

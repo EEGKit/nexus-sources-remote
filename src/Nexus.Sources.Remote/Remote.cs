@@ -1,6 +1,9 @@
-﻿using Nexus.DataModel;
+﻿using Microsoft.Extensions.Logging;
+using Nexus.DataModel;
 using Nexus.Extensibility;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Text.Json;
 
 namespace Nexus.Extensions
 {
@@ -45,50 +48,54 @@ namespace Nexus.Extensions
 
         public async Task SetContextAsync(
             DataSourceContext context, 
+            ILogger logger,
             CancellationToken cancellationToken)
         {
             Context = context;
 
             // command
-            if (!Context.SourceConfiguration.TryGetValue("command", out var command))
+            if (!TryGetStringValue("command", out var command))
                 throw new KeyNotFoundException("The command parameter must be provided.");
 
             // listen-address
-            if (!Context.SourceConfiguration.TryGetValue("listen-address", out var listenAddressString))
+            if (!TryGetStringValue("listen-address", out var listenAddressString))
                 throw new KeyNotFoundException("The listen-address parameter must be provided.");
 
             if (!IPAddress.TryParse(listenAddressString, out var listenAddress))
                 throw new KeyNotFoundException("The listen-address parameter is not a valid IP-Address.");
 
             // listen-port
-            if (!Context.SourceConfiguration.TryGetValue("listen-port", out var listenPortString))
+            if (!TryGetStringValue("listen-port", out var listenPortString))
                 throw new KeyNotFoundException("The listen-port parameter must be provided.");
 
             if (!ushort.TryParse(listenPortString, out var listenPort))
                 throw new KeyNotFoundException("The listen-port parameter is not a valid port.");
 
             // arguments
-            var arguments = Context.SourceConfiguration.ContainsKey("arguments")
-                ? Context.SourceConfiguration["arguments"]
-                : string.Empty;
+            if (!TryGetStringValue("arguments", out var arguments))
+                arguments = string.Empty;
 
-            // arguments
-            var environmentVariablesRaw = Context.SourceConfiguration.ContainsKey("environment-variables")
-                ? Context.SourceConfiguration["environment-variables"]
-                : string.Empty;
+            // environment variables
+            var requestConfiguration = Context.SourceConfiguration!.Value;
+            var environmentVariables = new Dictionary<string, string>();
 
-            var environmentVariables = environmentVariablesRaw.Split(";").Select(entry => 
+            if (requestConfiguration.ValueKind == JsonValueKind.Object &&
+                requestConfiguration.TryGetProperty("environment-variables", out var propertyValue) &&
+                propertyValue.ValueKind == JsonValueKind.Object)
             {
-                var parts = entry.Split("=");
-                var key = parts[0];
-                var value = parts[1];
+                var environmentVariablesRaw = JsonSerializer
+                    .Deserialize<Dictionary<string, JsonElement>>(propertyValue);
+                    
+                if (environmentVariablesRaw is not null)
+                    environmentVariables = environmentVariablesRaw
+                        .Where(entry => entry.Value.ValueKind == JsonValueKind.String)
+                        .ToDictionary(entry => entry.Key, entry => entry.Value.GetString() ?? "");
+            }
 
-                return (key, value);
-            }).ToDictionary(entry => entry.key, entry => entry.value);
-
+            //
             var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromSeconds(10));
 
-            _communicator = new RemoteCommunicator(command, arguments, environmentVariables, listenAddress, listenPort, Context.Logger);
+            _communicator = new RemoteCommunicator(command, arguments, environmentVariables, listenAddress, listenPort, logger);
             _rpcServer = await _communicator.ConnectAsync(timeoutTokenSource.Token);
 
             var apiVersion = (await _rpcServer.GetApiVersionAsync(timeoutTokenSource.Token)).ApiVersion;
@@ -184,6 +191,19 @@ namespace Nexus.Extensions
 
                 progress.Report(++counter / requests.Length);
             }
+        }
+
+        private bool TryGetStringValue(string propertyName, [NotNullWhen(returnValue: true)] out string? value)
+        {
+            value = default;
+            var requestConfiguration = Context.SourceConfiguration!.Value;
+
+            if (requestConfiguration.ValueKind == JsonValueKind.Object &&
+                requestConfiguration.TryGetProperty(propertyName, out var propertyValue) &&
+                propertyValue.ValueKind == JsonValueKind.String)
+                value = propertyValue.GetString();
+
+            return value != default;
         }
 
         private CancellationTokenSource GetTimeoutTokenSource(TimeSpan timeout)

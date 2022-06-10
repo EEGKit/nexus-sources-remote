@@ -5,6 +5,7 @@ using Nexus.DataModel;
 using Nexus.Extensibility;
 using Nexus.Extensions;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Xunit;
 
 namespace DataSource
@@ -18,21 +19,23 @@ namespace DataSource
             var dataSource = new Remote() as IDataSource;
 
             var context = new DataSourceContext(
-                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "..", "TESTDATA")),
-                SystemConfiguration: new Dictionary<string, string>(),
-                SourceConfiguration: new Dictionary<string, string>() 
+                ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+                SystemConfiguration: default,
+                SourceConfiguration: new JsonObject
                 { 
                     ["command"] = "python",
                     ["arguments"] = "Python/Python.py 44444",
-                    ["environment-variables"] = $"PYTHONPATH={Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}",
+                    ["environment-variables"] = new JsonObject()
+                    {
+                        ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}"
+                    },
                     ["listen-address"] = "127.0.0.1",
                     ["listen-port"] = "44444",
-                },
-                RequestConfiguration: new Dictionary<string, string>(),
-                Logger: NullLogger.Instance
+                }.Deserialize<JsonElement>(),
+                RequestConfiguration: default
             );
 
-            await dataSource.SetContextAsync(context, CancellationToken.None);
+            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
             // act
             var actual = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
@@ -90,21 +93,23 @@ namespace DataSource
             var dataSource = new Remote() as IDataSource;
 
             var context = new DataSourceContext(
-                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "..", "TESTDATA")),
-                SystemConfiguration: new Dictionary<string, string>(),
-                SourceConfiguration: new Dictionary<string, string>()
+                ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+                SystemConfiguration: default,
+                SourceConfiguration: new JsonObject()
                 {
                     ["command"] = "python",
                     ["arguments"] = "Python/Python.py 44444",
-                    ["environment-variables"] = $"PYTHONPATH={Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "src", "remoting", "python-remoting")}",
+                    ["environment-variables"] = new JsonObject()
+                    {
+                        ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}"
+                    },
                     ["listen-address"] = "127.0.0.1",
                     ["listen-port"] = "44444",
-                },
-                RequestConfiguration: new Dictionary<string, string>(),
-                Logger: NullLogger.Instance
+                }.Deserialize<JsonElement>(),
+                RequestConfiguration: default
             );
 
-            await dataSource.SetContextAsync(context, CancellationToken.None);
+            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
             var actual = await dataSource.GetTimeRangeAsync("/A/B/C", CancellationToken.None);
 
@@ -118,21 +123,23 @@ namespace DataSource
             var dataSource = new Remote() as IDataSource;
 
             var context = new DataSourceContext(
-                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "..", "TESTDATA")),
-                SystemConfiguration: new Dictionary<string, string>(),
-                SourceConfiguration: new Dictionary<string, string>()
+                ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+                SystemConfiguration: default,
+                SourceConfiguration: new JsonObject()
                 {
                     ["command"] = "python",
                     ["arguments"] = "Python/Python.py 44444",
-                    ["environment-variables"] = $"PYTHONPATH={Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "src", "remoting", "python-remoting")}",
+                    ["environment-variables"] = new JsonObject()
+                    {
+                        ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}"
+                    },
                     ["listen-address"] = "127.0.0.1",
                     ["listen-port"] = "44444",
-                },
-                RequestConfiguration: new Dictionary<string, string>(),
-                Logger: NullLogger.Instance
+                }.Deserialize<JsonElement>(),
+                RequestConfiguration: default
             );
 
-            await dataSource.SetContextAsync(context, CancellationToken.None);
+            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
             var begin = new DateTime(2020, 01, 02, 00, 00, 00, DateTimeKind.Utc);
             var end = new DateTime(2020, 01, 03, 00, 00, 00, DateTimeKind.Utc);
@@ -147,26 +154,32 @@ namespace DataSource
             var dataSource = new Remote() as IDataSource;
 
             var context = new DataSourceContext(
-                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "..", "TESTDATA")),
-                SystemConfiguration: new Dictionary<string, string>(),
-                SourceConfiguration: new Dictionary<string, string>()
+                ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+                SystemConfiguration: default,
+                SourceConfiguration: new JsonObject()
                 {
                     ["command"] = "python",
                     ["arguments"] = "Python/Python.py 44444",
-                    ["environment-variables"] = $"PYTHONPATH={Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "src", "remoting", "python-remoting")}",
+                    ["environment-variables"] = new JsonObject()
+                    {
+                        ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}"
+                    },
                     ["listen-address"] = "127.0.0.1",
                     ["listen-port"] = "44444",
-                },
-                RequestConfiguration: new Dictionary<string, string>(),
-                Logger: NullLogger.Instance
+                }.Deserialize<JsonElement>(),
+                RequestConfiguration: default
             );
 
-            await dataSource.SetContextAsync(context, CancellationToken.None);
+            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
             var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
             var resource = catalog.Resources!.First();
             var representation = resource.Representations!.First();
-            var catalogItem = new CatalogItem(catalog, resource, representation);
+#error Continue here
+            var catalogItem = new CatalogItem(
+                catalog with { Resources = default! }, 
+                resource with { Representations = default! }, 
+                representation);
 
             var begin = new DateTime(2019, 12, 31, 0, 0, 0, DateTimeKind.Utc);
             var end = new DateTime(2020, 01, 03, 0, 0, 0, DateTimeKind.Utc);
@@ -208,21 +221,23 @@ namespace DataSource
             var dataSource = new Remote() as IDataSource;
 
             var context = new DataSourceContext(
-                ResourceLocator: new Uri(Path.Combine(Directory.GetCurrentDirectory(), "..", "TESTDATA")),
-                SystemConfiguration: new Dictionary<string, string>(),
-                SourceConfiguration: new Dictionary<string, string>()
+                ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+                SystemConfiguration: default,
+                SourceConfiguration: new JsonObject()
                 {
                     ["command"] = "python",
                     ["arguments"] = "Python/Python.py 44444",
-                    ["environment-variables"] = $"PYTHONPATH={Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "src", "remoting", "python-remoting")}",
+                    ["environment-variables"] = new JsonObject()
+                    {
+                        ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}"
+                    },
                     ["listen-address"] = "127.0.0.1",
                     ["listen-port"] = "44444",
-                },
-                RequestConfiguration: new Dictionary<string, string>(),
-                Logger: loggerMock.Object
+                }.Deserialize<JsonElement>(),
+                RequestConfiguration: default
             );
 
-            await dataSource.SetContextAsync(context, CancellationToken.None);
+            await dataSource.SetContextAsync(context, loggerMock.Object, CancellationToken.None);
 
             loggerMock.Verify(
                 x => x.Log(
