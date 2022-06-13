@@ -175,7 +175,7 @@ namespace DataSource
             var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
             var resource = catalog.Resources!.First();
             var representation = resource.Representations!.First();
-#error Continue here
+
             var catalogItem = new CatalogItem(
                 catalog with { Resources = default! }, 
                 resource with { Representations = default! }, 
@@ -211,6 +211,16 @@ namespace DataSource
             var longData = new CastMemoryManager<byte, long>(data).Memory;
 
             Assert.True(expectedData.SequenceEqual(longData.ToArray()));
+
+            for (int i = 0; i < status.Length; i++)
+            {
+                if (status.Span[i] != 0)
+                {
+                    var b = 1;
+                }
+            }
+
+
             Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
         }
 

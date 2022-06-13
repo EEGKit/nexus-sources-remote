@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using StreamJsonRpc;
 using System.Collections.Concurrent;
@@ -121,11 +122,12 @@ namespace Nexus.Extensions
                         ContractResolver = new DefaultContractResolver
                         {
                             NamingStrategy = new CamelCaseNamingStrategy()
-                        }
+                        },
                     }
                 };
 
                 formatter.JsonSerializer.Converters.Add(new JsonElementConverter());
+                formatter.JsonSerializer.Converters.Add(new StringEnumConverter());
 
                 var messageHandler = new LengthHeaderMessageHandler(commStream, commStream, formatter);
                 var jsonRpc = new JsonRpc(messageHandler);
