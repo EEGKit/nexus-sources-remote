@@ -85,7 +85,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: artifacts
-          path: artifacts
+          path: artifacts/packages
 
       # GitHub Package Registry is broken by design: https://github.community/t/download-from-github-package-registry-without-authentication/14407/138
       - name: Nuget package (MyGet)
@@ -113,6 +113,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: artifacts
+          path: artifacts/packages
 
       - name: GitHub Release Artifacts
         uses: softprops/action-gh-release@v1
