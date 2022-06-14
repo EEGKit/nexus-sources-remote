@@ -40,6 +40,7 @@ jobs:
 
       - name: Install
         run: |
+         apt install jq
          npm install -g pyright
          python -m pip install build wheel pytest pytest-asyncio
          python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ nexus-extensibility

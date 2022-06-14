@@ -4,6 +4,10 @@
     <TargetFramework>$(TargetFrameworkVersion)</TargetFramework>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' == 'True'">
+	  <DefineConstants>LINUX</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
     <PackageReference Include="Moq" Version="4.16.1" />
@@ -20,13 +24,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Bash\Bash.sh">
+    <None Update="bash\remote.sh">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="Bash\catalog.json">
+    <None Update="bash\catalog.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="Python\Python.py">
+    <None Update="python\remote.py">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="TESTDATA\2019-12\2019-12-31\2019-12-31_12-00-00.dat">

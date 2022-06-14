@@ -66,11 +66,17 @@ listen() {
         elif [ "$method" = "setContext" ]; then
             response='{ "jsonrpc": "2.0", "id": '$id', "result": null }'
 
+            echo "Sending log message ..."
+            log_message='{ "jsonrpc": "2.0", "method": "log", "params": [ "Information", "Logging works!" ] }'
+            declare -i log_message_length=84
+            write $log_message_length 32 "dummy" >&3
+            printf "$log_message" >&3
+
         elif [ "$method" = "getCatalogIds" ]; then
             response='{ "jsonrpc": "2.0", "id": '$id', "result": { "CatalogIds": [ "/A/B/C" ] } }'
 
         elif [ "$method" = "getCatalog" ]; then
-            catalog=$(<catalog.json)
+            catalog=$(<bash/catalog.json)
             response='{ "jsonrpc": "2.0", "id": '$id', "result": '"$catalog"' }'
 
         elif [ "$method" = "getTimeRange" ]; then

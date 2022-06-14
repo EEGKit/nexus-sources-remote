@@ -9,7 +9,9 @@
         "Id": "resource1",
         "Properties": {
           "Unit": "°C",
-          "Groups:0": "group1"
+          "Groups": [
+            "group1"
+          ]
         },
         "Representations": [
           {
@@ -22,7 +24,9 @@
         "Id": "resource2",
         "Properties": {
           "Unit": "bar",
-          "Groups:0": "group2"
+          "Groups": [
+            "group2"
+          ]
         },
         "Representations": [
           {

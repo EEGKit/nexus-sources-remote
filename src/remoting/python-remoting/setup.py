@@ -69,6 +69,6 @@ setuptools.setup(
     },
     python_requires=">=3.9",
     install_requires=[
-        "nexus-extensibility>=1.0.0b11068"
+        "nexus-extensibility>=1.0.0b11090"
     ]
 )
