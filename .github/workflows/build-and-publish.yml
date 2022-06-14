@@ -45,6 +45,10 @@ jobs:
          python -m pip install build wheel pytest pytest-asyncio
          python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ nexus-extensibility
 
+      - name: Prepare
+        run: |
+         chmod +x tests/Nexus.Sources.Remote.Tests/bash/remote.sh
+
       - name: Build
         run: |
          dotnet build -c Release /p:Version=${{ env.VERSION }} /p:GeneratePackage=true src/Nexus.Sources.Remote/Nexus.Sources.Remote.csproj
