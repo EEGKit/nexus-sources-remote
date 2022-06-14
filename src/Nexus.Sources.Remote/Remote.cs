@@ -3,6 +3,7 @@ using Nexus.DataModel;
 using Nexus.Extensibility;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 
 namespace Nexus.Extensions
@@ -15,6 +16,7 @@ namespace Nexus.Extensions
     {
         #region Fields
 
+        private ReadDataHandler? _readData;
         private static int API_LEVEL = 1;
         private RemoteCommunicator _communicator = default!;
         private IJsonRpcServer _rpcServer = default!;
@@ -95,7 +97,15 @@ namespace Nexus.Extensions
             //
             var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromSeconds(10));
 
-            _communicator = new RemoteCommunicator(command, arguments, environmentVariables, listenAddress, listenPort, logger);
+            _communicator = new RemoteCommunicator(
+                command,
+                arguments, 
+                environmentVariables, 
+                listenAddress,
+                listenPort,
+                HandleReadDataAsync,
+                logger);
+
             _rpcServer = await _communicator.ConnectAsync(timeoutTokenSource.Token);
 
             var apiVersion = (await _rpcServer.GetApiVersionAsync(timeoutTokenSource.Token)).ApiVersion;
@@ -172,25 +182,48 @@ namespace Nexus.Extensions
             IProgress<double> progress, 
             CancellationToken cancellationToken)
         {
-            var counter = 0.0;
+            _readData = readData;
 
-            foreach (var (catalogItem, data, status) in requests)
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                var counter = 0.0;
 
-                var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-                cancellationToken.Register(() => timeoutTokenSource.Cancel());
+                foreach (var (catalogItem, data, status) in requests)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                var elementCount = data.Length / catalogItem.Representation.ElementSize;
+                    var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+                    cancellationToken.Register(() => timeoutTokenSource.Cancel());
 
-                await _rpcServer
-                    .ReadSingleAsync(begin, end, catalogItem, timeoutTokenSource.Token);
+                    var elementCount = data.Length / catalogItem.Representation.ElementSize;
 
-                await _communicator.ReadRawAsync(data, timeoutTokenSource.Token);
-                await _communicator.ReadRawAsync(status, timeoutTokenSource.Token);
+                    await _rpcServer
+                        .ReadSingleAsync(begin, end, catalogItem, timeoutTokenSource.Token);
 
-                progress.Report(++counter / requests.Length);
+                    await _communicator.ReadRawAsync(data, timeoutTokenSource.Token);
+                    await _communicator.ReadRawAsync(status, timeoutTokenSource.Token);
+
+                    progress.Report(++counter / requests.Length);
+                }
             }
+            finally
+            {
+                _readData = null;
+            }
+        }
+
+        async Task HandleReadDataAsync(string resourcePath, DateTime begin, DateTime end)
+        {
+            var localReadData = _readData;
+
+            if (localReadData is null)
+                throw new InvalidOperationException("Unable to read data without previous invocation of the ReadAsync method.");
+
+            var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+            var data = await localReadData(resourcePath, begin, end, timeoutTokenSource.Token);
+            var byteData = new CastMemoryManager<double, byte>(MemoryMarshal.AsMemory(data)).Memory;
+
+            await _communicator.WriteRawAsync(byteData, timeoutTokenSource.Token);
         }
 
         private bool TryGetStringValue(string propertyName, [NotNullWhen(returnValue: true)] out string? value)

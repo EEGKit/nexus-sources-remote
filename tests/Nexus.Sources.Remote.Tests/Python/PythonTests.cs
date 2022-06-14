@@ -215,6 +215,73 @@ namespace DataSource
         }
 
         [Fact]
+        public async Task CanReadDataHandler()
+        {
+            var dataSource = new Remote() as IDataSource;
+
+            var context = new DataSourceContext(
+                ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+                SystemConfiguration: default,
+                SourceConfiguration: new JsonObject()
+                {
+                    ["command"] = "python",
+                    ["arguments"] = "Python/Python.py 44444",
+                    ["environment-variables"] = new JsonObject()
+                    {
+                        ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}"
+                    },
+                    ["listen-address"] = "127.0.0.1",
+                    ["listen-port"] = "44444",
+                }.Deserialize<JsonElement>(),
+                RequestConfiguration: default
+            );
+
+            await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
+
+            var catalog = await dataSource.GetCatalogAsync("/D/E/F", CancellationToken.None);
+            var resource = catalog.Resources!.First();
+            var representation = resource.Representations!.First();
+
+            var catalogItem = new CatalogItem(
+                catalog with { Resources = default! },
+                resource with { Representations = default! },
+                representation);
+
+            var begin = new DateTime(2020, 01, 01, 0, 0, 0, DateTimeKind.Utc);
+            var end = new DateTime(2020, 01, 01, 0, 1, 0, DateTimeKind.Utc);
+            var (data, status) = ExtensibilityUtilities.CreateBuffers(representation, begin, end);
+
+            var length = 60;
+
+            var expectedData = Enumerable
+                .Range(0, length)
+                .Select(value => (double)value * 2)
+                .ToArray();
+
+            var expectedStatus = Enumerable
+                .Range(0, length)
+                .Select(value => (byte)1)
+                .ToArray();
+
+            Task<ReadOnlyMemory<double>> HandleReadDataAsync(string resourcePath, DateTime begin, DateTime end, CancellationToken cancellationToken)
+            {
+                ReadOnlyMemory<double> data = Enumerable
+                    .Range(0, length)
+                    .Select(value => (double)value)
+                    .ToArray();
+
+                return Task.FromResult(data);
+            }
+
+            var request = new ReadRequest(catalogItem, data, status);
+            await dataSource.ReadAsync(begin, end, new ReadRequest[] { request }, HandleReadDataAsync, new Progress<double>(), CancellationToken.None);
+            var doubleData = new CastMemoryManager<byte, double>(data).Memory;
+
+            Assert.True(expectedData.SequenceEqual(doubleData.ToArray()));
+            Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
+        }
+
+        [Fact]
         public async Task CanLog()
         {
             var loggerMock = new Mock<ILogger>();

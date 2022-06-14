@@ -60,6 +60,9 @@ namespace Nexus.Extensions
 
         public override object? ReadJson(Newtonsoft.Json.JsonReader reader, Type objectType, object? existingValue, Newtonsoft.Json.JsonSerializer serializer)
         {
+            if (reader.TokenType == Newtonsoft.Json.JsonToken.Null)
+                return null;
+            
             var serialized_tmp = JObject.Load(reader).ToString();
             var deserialized = JsonSerializer.Deserialize<JsonElement>(serialized_tmp);
             return deserialized;

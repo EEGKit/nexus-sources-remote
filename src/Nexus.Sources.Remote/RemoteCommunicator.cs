@@ -24,6 +24,7 @@ namespace Nexus.Extensions
         private IJsonRpcServer _rpcServer = default!;
 
         private ILogger _logger;
+        private Func<string, DateTime, DateTime, Task> _readData;
 
         private string _command;
         private string _arguments;
@@ -41,11 +42,13 @@ namespace Nexus.Extensions
             Dictionary<string, string> environmentVariables, 
             IPAddress listenAddress,
             ushort listenPort,
+            Func<string, DateTime, DateTime, Task> readData,
             ILogger logger)
         {
             _command = command;
             _arguments = arguments;
             _environmentVariables = environmentVariables;
+            _readData = readData;
             _logger = logger;
 
             var endpoint = $"{listenAddress}:{listenPort}";
@@ -137,13 +140,14 @@ namespace Nexus.Extensions
                     _logger.Log(logLevel, message);
                 }));
 
+                jsonRpc.AddLocalRpcMethod("readData", _readData);
                 jsonRpc.StartListening();
 
                 _rpcServer = jsonRpc.Attach<IJsonRpcServer>(new JsonRpcProxyOptions()
                 {
-                    MethodNameTransform = pascalCaseName =>
+                    MethodNameTransform = pascalCaseAsyncName =>
                     {
-                        return char.ToLower(pascalCaseName[0]) + pascalCaseName.Substring(1);
+                        return char.ToLower(pascalCaseAsyncName[0]) + pascalCaseAsyncName.Substring(1).Replace("Async", string.Empty);
                     }
                 });
 
@@ -185,6 +189,20 @@ namespace Nexus.Extensions
 
                 buffer = buffer.Slice(readCount);
             }
+        }
+
+        public Task WriteRawAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+        {
+            return InternalWriteRawAsync(buffer, _dataStream, cancellationToken);
+        }
+
+        private async Task InternalWriteRawAsync(ReadOnlyMemory<byte> buffer, Stream target, CancellationToken cancellationToken)
+        {
+            var length = BitConverter.GetBytes(buffer.Length).Reverse().ToArray();
+
+            await target.WriteAsync(length, cancellationToken);
+            await target.WriteAsync(buffer, cancellationToken);
+            await target.FlushAsync();
         }
 
         private async Task<(string Identifier, TcpClient Client)> GetTcpClientAsync(string[] filters, CancellationToken cancellationToken)

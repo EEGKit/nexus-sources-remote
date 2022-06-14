@@ -1,6 +1,7 @@
 import asyncio
 import glob
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import Callable
@@ -15,7 +16,7 @@ from nexus_remoting import RemoteCommunicator
 
 class PythonDataSource(IDataSource):
     
-    async def set_context_async(self, context, logger):
+    async def set_context(self, context, logger):
         
         self._context: DataSourceContext = context
 
@@ -24,7 +25,7 @@ class PythonDataSource(IDataSource):
 
         logger.log(LogLevel.Information, "Logging works!")
 
-    async def get_catalog_registrations_async(self, path: str):
+    async def get_catalog_registrations(self, path: str):
 
         if path == "/":
             return [
@@ -35,7 +36,7 @@ class PythonDataSource(IDataSource):
         else:
             return []
 
-    async def get_catalog_async(self, catalog_id: str):
+    async def get_catalog(self, catalog_id: str):
 
         if (catalog_id == "/A/B/C"):
 
@@ -62,7 +63,7 @@ class PythonDataSource(IDataSource):
 
         elif (catalog_id == "/D/E/F"):
 
-            representation = Representation(NexusDataType.FLOAT32, timedelta(seconds=1))
+            representation = Representation(NexusDataType.FLOAT64, timedelta(seconds=1))
 
             resource = ResourceBuilder("resource1") \
                 .with_unit("m/s") \
@@ -79,7 +80,7 @@ class PythonDataSource(IDataSource):
 
         return catalog
 
-    async def get_time_range_async(self, catalog_id: str):
+    async def get_time_range(self, catalog_id: str):
 
         if catalog_id != "/A/B/C":
             raise Exception("Unknown catalog ID.")
@@ -92,7 +93,7 @@ class PythonDataSource(IDataSource):
 
         return (begin, end)
 
-    async def get_availability_async(self, catalog_id: str, begin: datetime, end: datetime):
+    async def get_availability(self, catalog_id: str, begin: datetime, end: datetime):
 
         if catalog_id != "/A/B/C":
             raise Exception("Unknown catalog ID.")
@@ -107,11 +108,23 @@ class PythonDataSource(IDataSource):
         
         return actual_file_count / max_file_count
 
-    async def read_async(self, 
+    def read(self, 
         begin: datetime, 
         end: datetime,
         requests: list[ReadRequest], 
         read_data: ReadDataHandler,
+        report_progress: Callable[[float], None]):
+
+        if (requests[0].catalog_item.catalog.id == "/A/B/C"):
+            return self._read_local_files(begin, end, requests, report_progress)
+
+        else:
+            return self._read_and_modify_nexus_data(begin, end, requests, read_data, report_progress)
+
+    async def _read_local_files(self, 
+        begin: datetime, 
+        end: datetime,
+        requests: list[ReadRequest], 
         report_progress: Callable[[float], None]):
 
         # ############################################################################
@@ -168,6 +181,23 @@ class PythonDataSource(IDataSource):
                             request.status[target_offset + i] = 1
 
                 current_begin += timedelta(days = 1)
+
+    async def _read_and_modify_nexus_data(self, 
+        begin: datetime, 
+        end: datetime,
+        requests: list[ReadRequest],
+        read_data: ReadDataHandler,
+        report_progress: Callable[[float], None]):
+        
+        for request in requests:
+            data_from_nexus = await read_data("/need/more/data", begin, end)
+            double_data = request.data.cast("d")
+
+            for i in range(0, len(double_data)):
+                double_data[i] = data_from_nexus[i] * 2
+
+            for i in range(0, len(request.status)):
+                request.status[i] = 1
 
 # get address
 address = "localhost"

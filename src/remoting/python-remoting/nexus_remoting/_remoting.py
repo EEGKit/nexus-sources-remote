@@ -18,14 +18,14 @@ _json_encoder_options: JsonEncoderOptions = JsonEncoderOptions(
     property_name_decoder=to_snake_case
 )
 
+_lock: Lock = Lock()
+
 class _Logger(ILogger):
 
-    _tcpCommSocket: socket.socket
-    _lock: Lock
+    _tcp_comm_socket: socket.socket
 
-    def __init__(self, tcp_socket: socket.socket, lock: Lock):
-        self._tcpCommSocket = tcp_socket
-        self._lock = lock
+    def __init__(self, tcp_socket: socket.socket):
+        self._tcp_comm_socket = tcp_socket
 
     def log(self, log_level: LogLevel, message: str):
 
@@ -35,13 +35,7 @@ class _Logger(ILogger):
             "params": [log_level.name, message]
         }
         
-        encoded = JsonEncoder.encode(notification, _json_encoder_options)
-        jsonResponse = json.dumps(encoded)
-        encodedResponse = jsonResponse.encode()
-
-        with self._lock:
-            self._tcpCommSocket.sendall(struct.pack(">I", len(encodedResponse)))
-            self._tcpCommSocket.sendall(encodedResponse)
+        _send_to_server(notification, self._tcp_comm_socket)
 
 class RemoteCommunicator:
     """A remote communicator."""
@@ -58,7 +52,6 @@ class RemoteCommunicator:
 
         self._address: str = address
         self._port: int = port
-        self._lock: Lock = Lock()
         self._tcp_comm_socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._tcp_data_socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -86,16 +79,11 @@ class RemoteCommunicator:
             # https://www.jsonrpc.org/specification
 
             # get request message
-            size_buffer = self._tcp_comm_socket.recv(4, socket.MSG_WAITALL)
-
-            if len(size_buffer) == 0:
-                self._shutdown()
-
-            size = struct.unpack(">I", size_buffer)[0]
+            size = _read_size(self._tcp_comm_socket)
             json_request = self._tcp_comm_socket.recv(size, socket.MSG_WAITALL)
 
-            if len(size_buffer) == 0:
-                self._shutdown()
+            if len(json_request) == 0:
+                _shutdown()
 
             request: Dict[str, Any] = json.loads(json_request)
 
@@ -134,13 +122,7 @@ class RemoteCommunicator:
             response["id"] = request["id"]
 
             # send response
-            encoded = JsonEncoder.encode(response, _json_encoder_options)
-            json_response = json.dumps(encoded)
-            encoded_response = json_response.encode()
-
-            with self._lock:
-                self._tcp_comm_socket.sendall(struct.pack(">I", len(encoded_response)))
-                self._tcp_comm_socket.sendall(encoded_response)
+            _send_to_server(response, self._tcp_comm_socket)
 
             # send data
             if data is not None and status is not None:
@@ -156,13 +138,13 @@ class RemoteCommunicator:
         method_name = request["method"]
         params = cast(list[Any], request["params"])
 
-        if method_name == "getApiVersionAsync":
+        if method_name == "getApiVersion":
 
             result = {
                 "apiVersion": 1
             }
 
-        elif method_name == "setContextAsync":
+        elif method_name == "setContext":
 
             raw_context = params[0]
             resource_locator = urlparse(cast(str, raw_context["resourceLocator"]))
@@ -176,7 +158,7 @@ class RemoteCommunicator:
             request_configuration = raw_context["requestConfiguration"] \
                 if "requestonfiguration" in raw_context else None
 
-            logger = _Logger(self._tcp_comm_socket, self._lock)
+            logger = _Logger(self._tcp_comm_socket)
 
             context = DataSourceContext(
                 resource_locator,
@@ -184,48 +166,48 @@ class RemoteCommunicator:
                 source_configuration,
                 request_configuration)
 
-            await self._data_source.set_context_async(context, logger)
+            await self._data_source.set_context(context, logger)
 
-        elif method_name == "getCatalogRegistrationsAsync":
+        elif method_name == "getCatalogRegistrations":
 
             path = cast(str, params[0])
-            registrations = await self._data_source.get_catalog_registrations_async(path)
+            registrations = await self._data_source.get_catalog_registrations(path)
 
             result = {
                 "registrations": registrations
             }
 
-        elif method_name == "getCatalogAsync":
+        elif method_name == "getCatalog":
 
             catalog_id = params[0]
-            catalog = await self._data_source.get_catalog_async(catalog_id)
+            catalog = await self._data_source.get_catalog(catalog_id)
             
             result = {
                 "catalog": catalog
             }
 
-        elif method_name == "getTimeRangeAsync":
+        elif method_name == "getTimeRange":
 
             catalog_id = params[0]
-            (begin, end) = await self._data_source.get_time_range_async(catalog_id)
+            (begin, end) = await self._data_source.get_time_range(catalog_id)
 
             result = {
                 "begin": begin,
                 "end": end,
             }
 
-        elif method_name == "getAvailabilityAsync":
+        elif method_name == "getAvailability":
 
             catalog_id = params[0]
             begin = datetime.strptime(params[1], "%Y-%m-%dT%H:%M:%SZ")
             end = datetime.strptime(params[2], "%Y-%m-%dT%H:%M:%SZ")
-            availability = await self._data_source.get_availability_async(catalog_id, begin, end)
+            availability = await self._data_source.get_availability(catalog_id, begin, end)
 
             result = {
                 "availability": availability
             }
 
-        elif method_name == "readSingleAsync":
+        elif method_name == "readSingle":
 
             begin = datetime.strptime(params[0], "%Y-%m-%dT%H:%M:%SZ")
             end = datetime.strptime(params[1], "%Y-%m-%dT%H:%M:%SZ")
@@ -233,7 +215,12 @@ class RemoteCommunicator:
             (data, status) = ExtensibilityUtilities.create_buffers(catalog_item.representation, begin, end)
             read_request = ReadRequest(catalog_item, data, status)
 
-            await self._data_source.read_async(begin, end, [read_request], cast(Any, None), cast(Any, None))
+            await self._data_source.read(
+                begin, 
+                end, 
+                [read_request], 
+                self._handle_read_data, 
+                self._handle_report_progress)
 
         # Add cancellation support?
         # https://github.com/microsoft/vs-streamjsonrpc/blob/main/doc/sendrequest.md#cancellation
@@ -254,5 +241,45 @@ class RemoteCommunicator:
 
         return (result, data, status)
 
-    def _shutdown(self):
-        exit()
+    async def _handle_read_data(self, resource_path: str, begin: datetime, end: datetime) -> memoryview:
+
+        read_data_request = {
+            "jsonrpc": "2.0",
+            "method": "readData",
+            "params": [resource_path, begin, end]
+        }
+
+        _send_to_server(read_data_request, self._tcp_comm_socket)
+
+        size = _read_size(self._tcp_data_socket)
+        data = self._tcp_data_socket.recv(size, socket.MSG_WAITALL)
+
+        if len(data) == 0:
+            _shutdown()
+
+        return memoryview(data).cast("d")
+
+    def _handle_report_progress(self, progress_value: float):
+        pass # not implemented
+
+def _read_size(current_socket: socket.socket):
+    size_buffer = current_socket.recv(4, socket.MSG_WAITALL)
+
+    if len(size_buffer) == 0:
+        _shutdown()
+
+    size = struct.unpack(">I", size_buffer)[0]
+
+    return size
+
+def _send_to_server(message: Any, current_socket: socket.socket):
+    encoded = JsonEncoder.encode(message, _json_encoder_options)
+    json_response = json.dumps(encoded)
+    encoded_response = json_response.encode()
+
+    with _lock:
+        current_socket.sendall(struct.pack(">I", len(encoded_response)))
+        current_socket.sendall(encoded_response)
+
+def _shutdown():
+    exit()
