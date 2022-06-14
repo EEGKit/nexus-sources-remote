@@ -15,9 +15,4 @@
     <PackageReference Include="StreamJsonRpc" Version="2.11.35" />
   </ItemGroup>
 
-  <!-- This prevents the package to be rebuilt when dotnet test is executed. -->
-  <PropertyGroup Condition="$(GeneratePackage) == 'true'">
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-  </PropertyGroup>
-
 </Project>
