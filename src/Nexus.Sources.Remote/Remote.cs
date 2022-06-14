@@ -6,7 +6,7 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
-namespace Nexus.Extensions
+namespace Nexus.Sources
 {
     [ExtensionDescription(
         "Provides access to remote databases",

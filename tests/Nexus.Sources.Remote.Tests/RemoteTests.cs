@@ -3,17 +3,18 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Nexus.DataModel;
 using Nexus.Extensibility;
-using Nexus.Extensions;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Xunit;
 
-namespace DataSource
+namespace Nexus.Sources.Tests
 {
     public class RemoteTests
     {
-        [Fact]
-        public async Task ProvidesCatalog()
+        [Theory]
+        [InlineData("python", "Python/Python.py ")]
+        [InlineData("Bash.sh", "")]
+        public async Task ProvidesCatalog(string command, string preArgs)
         {
             // arrange
             var dataSource = new Remote() as IDataSource;
@@ -23,8 +24,8 @@ namespace DataSource
                 SystemConfiguration: default,
                 SourceConfiguration: new JsonObject
                 { 
-                    ["command"] = "python",
-                    ["arguments"] = "Python/Python.py 44444",
+                    ["command"] = command,
+                    ["arguments"] = $"{preArgs}44444",
                     ["environment-variables"] = new JsonObject()
                     {
                         ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}"

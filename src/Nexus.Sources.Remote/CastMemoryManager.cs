@@ -1,7 +1,7 @@
 ﻿using System.Buffers;
 using System.Runtime.InteropServices;
 
-namespace Nexus.Extensions
+namespace Nexus.Sources
 {
     internal class CastMemoryManager<TFrom, TTo> : MemoryManager<TTo>
         where TFrom : struct

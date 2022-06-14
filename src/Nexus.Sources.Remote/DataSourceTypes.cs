@@ -4,7 +4,7 @@ using Nexus.DataModel;
 using Nexus.Extensibility;
 using System.Text.Json;
 
-namespace Nexus.Extensions
+namespace Nexus.Sources
 {
     internal interface IJsonRpcServer
     {

@@ -60,27 +60,27 @@ listen() {
         # prepare response
         echo "Received invocation for method '$method'. Preparing response ..."
 
-        if [ "$method" = "getApiVersionAsync" ]; then
+        if [ "$method" = "getApiVersion" ]; then
             response='{ "jsonrpc": "2.0", "id": '$id', "result": { "ApiVersion": 1 } }'
 
-        elif [ "$method" = "setContextAsync" ]; then
+        elif [ "$method" = "setContext" ]; then
             response='{ "jsonrpc": "2.0", "id": '$id', "result": null }'
 
-        elif [ "$method" = "getCatalogIdsAsync" ]; then
+        elif [ "$method" = "getCatalogIds" ]; then
             response='{ "jsonrpc": "2.0", "id": '$id', "result": { "CatalogIds": [ "/A/B/C" ] } }'
 
-        elif [ "$method" = "getCatalogAsync" ]; then
+        elif [ "$method" = "getCatalog" ]; then
             catalog=$(<catalog.json)
             response='{ "jsonrpc": "2.0", "id": '$id', "result": '"$catalog"' }'
 
-        elif [ "$method" = "getTimeRangeAsync" ]; then
+        elif [ "$method" = "getTimeRange" ]; then
             response='{ "jsonrpc": "2.0", "id": '$id', "result": { "Begin": "2019-12-31T12:00:00Z", "End": "2020-01-02T09:50:00Z" } }'
 
-        elif [ "$method" = "getAvailabilityAsync" ]; then
+        elif [ "$method" = "getAvailability" ]; then
             availability=$(bc -l <<< "2/144")
             response='{ "jsonrpc": "2.0", "id": '$id', "result": { "Availability": '$availability' } }'
 
-        elif [ "$method" = "readSingleAsync" ]; then
+        elif [ "$method" = "readSingle" ]; then
             response='{ "jsonrpc": "2.0", "id": '$id', "result": null }'
 
         else
@@ -100,7 +100,7 @@ listen() {
         write $byte_length 32 "dummy" >&3
         printf "$response" >&3
 
-        if [ "$method" = "readSingleAsync" ]; then
+        if [ "$method" = "readSingle" ]; then
 
             # send data (86400 seconds per day * 3 days * 8 bytes)
             echo "Sending data ..."
