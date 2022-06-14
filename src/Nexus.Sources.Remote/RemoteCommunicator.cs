@@ -168,11 +168,9 @@ namespace Nexus.Extensions
             }
         }
 
-        public Task ReadRawAsync<T>(Memory<T> buffer, CancellationToken cancellationToken)
-           where T : unmanaged
+        public Task ReadRawAsync(Memory<byte> buffer, CancellationToken cancellationToken)
         {
-            var memory = new CastMemoryManager<T, byte>(buffer).Memory;
-            return InternalReadRawAsync(memory, _dataStream, cancellationToken);
+            return InternalReadRawAsync(buffer, _dataStream, cancellationToken);
         }
 
         private async Task InternalReadRawAsync(Memory<byte> buffer, Stream source, CancellationToken cancellationToken)

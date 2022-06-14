@@ -211,16 +211,6 @@ namespace DataSource
             var longData = new CastMemoryManager<byte, long>(data).Memory;
 
             Assert.True(expectedData.SequenceEqual(longData.ToArray()));
-
-            for (int i = 0; i < status.Length; i++)
-            {
-                if (status.Span[i] != 0)
-                {
-                    var b = 1;
-                }
-            }
-
-
             Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
         }
 

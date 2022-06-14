@@ -18,8 +18,8 @@ namespace Nexus.Extensions
             //
         }
 
-        public override MemoryHandle Pin(int elementIndex = 0) => throw new NotSupportedException();
+        public override MemoryHandle Pin(int elementIndex = 0) => throw new NotSupportedException("CastMemoryManager does not support pinning.");
 
-        public override void Unpin() => throw new NotSupportedException();
+        public override void Unpin() => throw new NotSupportedException("CastMemoryManager does not support unpinning.");
     }
 }
