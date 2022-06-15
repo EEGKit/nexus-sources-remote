@@ -1,6 +1,6 @@
 green=$'\e[0;32m'
 white=$'\e[0m'
-echo "${green}Welcome to the nexus-python setup run script"'!'"${white}"
+echo "${green}Welcome to the nexus-python run script"'!'"${white}"
 echo "${green}Setting up SSH ...${white}"
 
 apt update
