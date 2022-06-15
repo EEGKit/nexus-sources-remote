@@ -1,4 +1,5 @@
 echo "Hallo"
 
 
-sleep infinity
+trap : TERM INT
+sleep infinity & wait
