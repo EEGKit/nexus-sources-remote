@@ -8,5 +8,7 @@ apt install openssh-server -y
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/g' /etc/ssh/sshd_config
 service ssh start
 
+echo "${green}Setting up SSH ... Done.${white}"
+
 trap : TERM INT
 sleep infinity & wait
