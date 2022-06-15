@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Nexus.Sources
 {
@@ -55,27 +56,34 @@ namespace Nexus.Sources
         {
             Context = context;
 
-            // command
-            if (!TryGetStringValue("command", out var command))
-                throw new KeyNotFoundException("The command parameter must be provided.");
+            // mode
+            var mode = GetStringValueOrDefault("mode", "tcp", Context.SourceConfiguration);
+
+            if (mode != "tcp")
+                throw new NotSupportedException($"The mode {mode} is not supported.");
 
             // listen-address
-            if (!TryGetStringValue("listen-address", out var listenAddressString))
-                throw new KeyNotFoundException("The listen-address parameter must be provided.");
+            var listenAddressString = GetStringValueOrDefault("listen-address", "0.0.0.0", Context.SourceConfiguration);
 
             if (!IPAddress.TryParse(listenAddressString, out var listenAddress))
                 throw new KeyNotFoundException("The listen-address parameter is not a valid IP-Address.");
 
             // listen-port
-            if (!TryGetStringValue("listen-port", out var listenPortString))
-                throw new KeyNotFoundException("The listen-port parameter must be provided.");
+            var defaultMin = 49152;
+            var listenPortMin = GetIntValueOrDefault("listen-port-min", defaultMin, Context.SourceConfiguration);
 
-            if (!ushort.TryParse(listenPortString, out var listenPort))
-                throw new KeyNotFoundException("The listen-port parameter is not a valid port.");
+            if (!(1 <= listenPortMin && listenPortMin < 65536))
+                throw new KeyNotFoundException("The listen-port-min parameter is invalid.");
 
-            // arguments
-            if (!TryGetStringValue("arguments", out var arguments))
-                arguments = string.Empty;
+            var defaultMax = 65536;
+            var listenPortMax = GetIntValueOrDefault("listen-port-max", defaultMax, Context.SourceConfiguration);
+
+            if (!(1 <= listenPortMin && listenPortMin < 65536))
+                throw new KeyNotFoundException("The listen-port-max parameter is invalid.");
+
+            // template
+            if (!TryGetStringValue("template", Context.SourceConfiguration, out var templateId))
+                throw new KeyNotFoundException("The template parameter must be provided.");
 
             // environment variables
             var requestConfiguration = Context.SourceConfiguration!.Value;
@@ -94,15 +102,18 @@ namespace Nexus.Sources
                         .ToDictionary(entry => entry.Key, entry => entry.Value.GetString() ?? "");
             }
 
+            // Build command
+            var actualCommand = BuildCommand(templateId);
+
             //
             var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromSeconds(10));
 
             _communicator = new RemoteCommunicator(
-                command,
-                arguments, 
+                actualCommand,
                 environmentVariables, 
                 listenAddress,
-                listenPort,
+                listenPortMin,
+                listenPortMax,
                 HandleReadDataAsync,
                 logger);
 
@@ -212,7 +223,37 @@ namespace Nexus.Sources
             }
         }
 
-        async Task HandleReadDataAsync(string resourcePath, DateTime begin, DateTime end)
+        private string BuildCommand(string templateId)
+        {
+            var template = default(string);
+
+            if (Context.SystemConfiguration is not null &&
+                Context.SystemConfiguration.Value.ValueKind == JsonValueKind.Object &&
+                Context.SystemConfiguration.Value.TryGetProperty("remote-templates", out var templatesProperty) &&
+                templatesProperty.ValueKind == JsonValueKind.Object &&
+                templatesProperty.TryGetProperty(templateId, out var templateProperty) &&
+                templateProperty.ValueKind == JsonValueKind.String)
+            {
+                template = templateProperty.GetString();
+            }
+
+            if (template is null)
+                throw new Exception($"The template {templateId} does not exist.");
+
+            var command = Regex.Replace(template, "{(.*)}", match => 
+            {
+                var parameterKey = match.Groups[1].Value;
+
+                if (!TryGetStringValue(parameterKey, Context.SourceConfiguration, out var parameterValue))
+                    throw new Exception($"The {parameterKey} parameter must be provided.");
+
+                return parameterValue;
+            });
+
+            return command;
+        }
+
+        private async Task HandleReadDataAsync(string resourcePath, DateTime begin, DateTime end)
         {
             var localReadData = _readData;
 
@@ -226,17 +267,49 @@ namespace Nexus.Sources
             await _communicator.WriteRawAsync(byteData, timeoutTokenSource.Token);
         }
 
-        private bool TryGetStringValue(string propertyName, [NotNullWhen(returnValue: true)] out string? value)
+        private bool TryGetStringValue(string propertyName, JsonElement? configuration, [NotNullWhen(returnValue: true)] out string? value)
         {
             value = default;
-            var requestConfiguration = Context.SourceConfiguration!.Value;
 
-            if (requestConfiguration.ValueKind == JsonValueKind.Object &&
-                requestConfiguration.TryGetProperty(propertyName, out var propertyValue) &&
+            if (configuration is null)
+                return false;
+
+            if (configuration.Value.ValueKind == JsonValueKind.Object &&
+                configuration.Value.TryGetProperty(propertyName, out var propertyValue) &&
                 propertyValue.ValueKind == JsonValueKind.String)
                 value = propertyValue.GetString();
 
             return value != default;
+        }
+
+        private string GetStringValueOrDefault(string propertyName, string defaultValue, JsonElement? configuration)
+        {
+            var value = defaultValue;
+
+            if (configuration is null)
+                return value;
+
+            if (configuration.Value.ValueKind == JsonValueKind.Object &&
+                configuration.Value.TryGetProperty(propertyName, out var propertyValue) &&
+                propertyValue.ValueKind == JsonValueKind.String)
+                value = propertyValue.GetString() ?? value;
+
+            return value;
+        }
+
+        private int GetIntValueOrDefault(string propertyName, int defaultValue, JsonElement? configuration)
+        {
+            var value = defaultValue;
+            
+            if (configuration is null)
+                return value;
+
+            if (configuration.Value.ValueKind == JsonValueKind.Object &&
+                configuration.Value.TryGetProperty(propertyName, out var propertyValue) &&
+                propertyValue.ValueKind == JsonValueKind.Number)
+                value = propertyValue.GetInt32();
+
+            return value;
         }
 
         private CancellationTokenSource GetTimeoutTokenSource(TimeSpan timeout)

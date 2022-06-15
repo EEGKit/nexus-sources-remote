@@ -2,11 +2,12 @@
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using StreamJsonRpc;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Nexus.Sources
 {
@@ -14,10 +15,8 @@ namespace Nexus.Sources
     {
         #region Fields
 
-        private static ConcurrentDictionary<string, (TcpListener, SemaphoreSlim)> _uriToTcpListenerMap
-            = new ConcurrentDictionary<string, (TcpListener, SemaphoreSlim)>();
-
-        private SemaphoreSlim _connectSemaphore;
+        private static object _lock = new object();
+        private static int _nextMin = -1;
         private TcpListener _tcpListener;
         private Stream _commStream = default!;
         private Stream _dataStream = default!;
@@ -37,24 +36,30 @@ namespace Nexus.Sources
         #region Constructors
 
         public RemoteCommunicator(
-            string command, 
-            string arguments, 
-            Dictionary<string, string> environmentVariables, 
+            string command,
+            Dictionary<string, string> environmentVariables,
             IPAddress listenAddress,
-            ushort listenPort,
+            int listenPortMin,
+            int listenPortMax,
             Func<string, DateTime, DateTime, Task> readData,
             ILogger logger)
         {
-            _command = command;
-            _arguments = arguments;
             _environmentVariables = environmentVariables;
             _readData = readData;
             _logger = logger;
 
-            var endpoint = $"{listenAddress}:{listenPort}";
+            var listenPort = GetNextUnusedPort(listenPortMin, listenPortMax);
+            
+            command = Regex.Replace(command, "{remote-port}", listenPort.ToString());
+            var commandParts = command.Split(" ", count: 2);
+            _command = commandParts[0];
 
-            (_tcpListener, _connectSemaphore) = _uriToTcpListenerMap
-                .GetOrAdd(endpoint, uri => (new TcpListener(listenAddress, listenPort), new SemaphoreSlim(1, 1)));
+            _arguments = commandParts.Length == 2
+                ? commandParts[1]
+                : "";
+
+            _tcpListener = new TcpListener(listenAddress, listenPort);
+            _tcpListener.Start();
         }
 
         #endregion
@@ -63,13 +68,8 @@ namespace Nexus.Sources
 
         public async Task<IJsonRpcServer> ConnectAsync(CancellationToken cancellationToken)
         {
-            // only a single process can connect the tcp listener 
-            await _connectSemaphore.WaitAsync(cancellationToken);
-
             try
             {
-				// start tcp listener
-                _tcpListener.Start();
                 cancellationToken.Register(() => _tcpListener.Stop());
 				
                 // start process
@@ -168,7 +168,6 @@ namespace Nexus.Sources
             finally
             {
                 _tcpListener.Stop();
-                _connectSemaphore.Release();
             }
         }
 
@@ -203,6 +202,39 @@ namespace Nexus.Sources
             await target.WriteAsync(length, cancellationToken);
             await target.WriteAsync(buffer, cancellationToken);
             await target.FlushAsync();
+        }
+
+        private static int GetNextUnusedPort(int min, int max)
+        {
+            lock (_lock)
+            {
+                min = Math.Max(_nextMin, min);
+
+                if (max <= min)
+                    throw new ArgumentException("Max port cannot be less than or equal to min.");
+
+                var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
+
+                var usedPorts =
+                    ipProperties.GetActiveTcpConnections()
+                        .Where(connection => connection.State != TcpState.Closed)
+                        .Select(connection => connection.LocalEndPoint)
+                        .Concat(ipProperties.GetActiveTcpListeners())
+                        .Select(endpoint => endpoint.Port)
+                        .ToArray();
+
+                var firstUnused =
+                    Enumerable.Range(min, max - min)
+                        .Where(port => !usedPorts.Contains(port))
+                        .Select(port => new int?(port))
+                        .FirstOrDefault();
+
+                if (!firstUnused.HasValue)
+                    throw new Exception($"All TCP ports in the range of {min}..{max} are currently in use.");
+
+                _nextMin = (firstUnused.Value + 1) % max;
+                return firstUnused.Value;
+            }
         }
 
         private async Task<(string Identifier, TcpClient Client)> GetTcpClientAsync(string[] filters, CancellationToken cancellationToken)

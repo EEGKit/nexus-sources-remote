@@ -8,8 +8,8 @@
       {
         "Id": "resource1",
         "Properties": {
-          "Unit": "°C",
-          "Groups": [
+          "unit": "°C",
+          "groups": [
             "group1"
           ]
         },
@@ -23,8 +23,8 @@
       {
         "Id": "resource2",
         "Properties": {
-          "Unit": "bar",
-          "Groups": [
+          "unit": "bar",
+          "groups": [
             "group2"
           ]
         },

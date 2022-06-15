@@ -13,15 +13,15 @@ namespace Nexus.Sources.Tests
     public class RemoteTests
     {
         [Theory]
-        [InlineData("python", "python/remote.py ")]
+        [InlineData("python python/remote.py {remote-port}")]
 #if LINUX
-        [InlineData("bash/remote.sh", "")]
+        [InlineData("bash/remote.sh")]
 #endif
-        public async Task ProvidesCatalog(string command, string preArgs)
+        public async Task ProvidesCatalog(string command)
         {
             // arrange
             var dataSource = new Remote() as IDataSource;
-            var context = CreateContext(command, preArgs);
+            var context = CreateContext(command);
 
             await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -31,8 +31,8 @@ namespace Nexus.Sources.Tests
             // assert
             var actualProperties1 = actual.Properties;
             var actualIds = actual.Resources!.Select(resource => resource.Id).ToList();
-            var actualUnits = actual.Resources!.Select(resource => GetPropertyOrDefault(resource.Properties, "Unit")).ToList();
-            var actualGroups = actual.Resources!.SelectMany(resource => GetArrayOrDefault(resource.Properties, "Groups"));
+            var actualUnits = actual.Resources!.Select(resource => GetPropertyOrDefault(resource.Properties, "unit")).ToList();
+            var actualGroups = actual.Resources!.SelectMany(resource => GetArrayOrDefault(resource.Properties, "groups"));
             var actualDataTypes = actual.Resources!.SelectMany(resource => resource.Representations!.Select(representation => representation.DataType)).ToList();
 
             var expectedProperties1 = new Dictionary<string, string>() { ["a"] = "b" };
@@ -73,14 +73,14 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("python", "python/remote.py ")]
+        [InlineData("python python/remote.py {remote-port}")]
 #if LINUX
-        [InlineData("bash/remote.sh", "")]
+        [InlineData("bash/remote.sh")]
 #endif
-        public async Task CanProvideTimeRange(string command, string preArgs)
+        public async Task CanProvideTimeRange(string command)
         {
             var dataSource = new Remote() as IDataSource;
-            var context = CreateContext(command, preArgs);
+            var context = CreateContext(command);
 
             var expectedBegin = new DateTime(2019, 12, 31, 12, 00, 00, DateTimeKind.Utc);
             var expectedEnd = new DateTime(2020, 01, 02, 09, 50, 00, DateTimeKind.Utc);
@@ -94,14 +94,14 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("python", "python/remote.py ")]
+        [InlineData("python python/remote.py {remote-port}")]
 #if LINUX
-        [InlineData("bash/remote.sh", "")]
+        [InlineData("bash/remote.sh")]
 #endif
-        public async Task CanProvideAvailability(string command, string preArgs)
+        public async Task CanProvideAvailability(string command)
         {
             var dataSource = new Remote() as IDataSource;
-            var context = CreateContext(command, preArgs);
+            var context = CreateContext(command);
 
             await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -113,14 +113,14 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("python", "python/remote.py ", true)]
+        [InlineData("python python/remote.py {remote-port}", true)]
 #if LINUX
-        [InlineData("bash/remote.sh", "", false)]
+        [InlineData("bash/remote.sh", false)]
 #endif
-        public async Task CanReadFullDay(string command, string preArgs, bool complexData)
+        public async Task CanReadFullDay(string command, bool complexData)
         {
             var dataSource = new Remote() as IDataSource;
-            var context = CreateContext(command, preArgs);
+            var context = CreateContext(command);
 
             await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -176,15 +176,15 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("python", "python/remote.py ")]
+        [InlineData("python python/remote.py {remote-port}")]
 #if LINUX
-        [InlineData("bash/remote.sh", "")]
+        [InlineData("bash/remote.sh")]
 #endif
-        public async Task CanLog(string command, string preArgs)
+        public async Task CanLog(string command)
         {
             var loggerMock = new Mock<ILogger>();
             var dataSource = new Remote() as IDataSource;
-            var context = CreateContext(command, preArgs);
+            var context = CreateContext(command);
 
             await dataSource.SetContextAsync(context, loggerMock.Object, CancellationToken.None);
 
@@ -201,11 +201,11 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("python", "python/remote.py ")]
-        public async Task CanReadDataHandler(string command, string preArgs)
+        [InlineData("python python/remote.py {remote-port}")]
+        public async Task CanReadDataHandler(string command)
         {
             var dataSource = new Remote() as IDataSource;
-            var context = CreateContext(command, preArgs);
+            var context = CreateContext(command);
 
             await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -252,21 +252,26 @@ namespace Nexus.Sources.Tests
             Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
         }
 
-        private DataSourceContext CreateContext(string command, string preArgs)
+        private DataSourceContext CreateContext(string command)
         {
             return new DataSourceContext(
                 ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
-                SystemConfiguration: default,
+                SystemConfiguration: new JsonObject()
+                {
+                    ["remote-templates"] = new JsonObject()
+                    {
+                        ["local"] = "{command}",
+                    }
+                }.Deserialize<JsonElement>(),
                 SourceConfiguration: new JsonObject()
                 {
+                    ["listen-address"] = "0.0.0.0",
+                    ["template"] = "local",
                     ["command"] = command,
-                    ["arguments"] = $"{preArgs}44444",
                     ["environment-variables"] = new JsonObject()
                     {
                         ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}"
-                    },
-                    ["listen-address"] = "127.0.0.1",
-                    ["listen-port"] = "44444",
+                    }
                 }.Deserialize<JsonElement>(),
                 RequestConfiguration: default
             );
