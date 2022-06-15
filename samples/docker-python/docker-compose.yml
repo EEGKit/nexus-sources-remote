@@ -1,0 +1,9 @@
+version: "3.7"
+
+services:
+  nexus-python:
+    container_name: nexus-python
+    image: python:3.9.0
+    entrypoint: bash <(curl -s https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/samples/docker-python/run.sh)
+    restart: always
+
