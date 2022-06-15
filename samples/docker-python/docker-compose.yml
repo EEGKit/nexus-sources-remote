@@ -2,9 +2,16 @@ version: "3.7"
 
 services:
 
+  # Run the follow on the docker host before docker-compose up -d:
+  #   sudo mkdir -p /var/lib/nexus/.ssh
+  #   shared_ssh_folder=/var/lib/nexus/.ssh
+  #   sudo ssh-keygen -q -t rsa -N '' -f ${shared_ssh_folder}/id_rsa <<<y >/dev/null 2>&1
+
   ubuntu:
     container_name: test
     image: ubuntu:20.04
+    volumes:
+      - /var/lib/nexus/.ssh:/root/.ssh
     entrypoint: bash -c "apt update; apt install wget -y; wget -q https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/samples/docker-python/setup-test.sh; source setup-test.sh"
     restart: always
 
@@ -12,6 +19,6 @@ services:
     container_name: nexus-python
     image: python:3.9.0
     volumes:
-      - ~/nexus/python/.ssh:/root/.ssh
+      - /var/lib/nexus/.ssh:/root/.ssh
     entrypoint: bash -c "wget -q https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/samples/docker-python/setup-python.sh; source setup-python.sh"
     restart: always
