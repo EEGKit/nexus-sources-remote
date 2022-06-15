@@ -2,13 +2,6 @@ version: "3.7"
 
 services:
 
-  # Run the follow on the docker host before docker-compose up -d:
-  #   shared_ssh_folder=/var/lib/nexus/.ssh
-  #   sudo mkdir -p shared_ssh_folder
-  #   sudo ssh-keygen -q -t rsa -N '' -f ${shared_ssh_folder}/id_rsa <<<y >/dev/null 2>&1
-  #   echo -n "nexus-python " > ${shared_ssh_folder}/known-hosts
-  #   cat ${shared_ssh_folder}/id_rsa.pub >> ${shared_ssh_folder}/known-hosts
-
   ubuntu:
     container_name: test
     image: ubuntu:20.04
