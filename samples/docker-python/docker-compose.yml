@@ -5,7 +5,7 @@ services:
   ubuntu:
     container_name: test
     image: ubuntu:20.04
-    entrypoint: bash -c "wget -q https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/samples/docker-python/setup-test.sh; source setup-test.sh"
+    entrypoint: bash -c "apt install wget; wget -q https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/samples/docker-python/setup-test.sh; source setup-test.sh"
     restart: always
 
   nexus-python:
