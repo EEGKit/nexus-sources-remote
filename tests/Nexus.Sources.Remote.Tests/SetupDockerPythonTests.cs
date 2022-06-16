@@ -60,7 +60,7 @@ namespace Nexus.Sources.Tests
                 {
                     ["remote-templates"] = new JsonObject()
                     {
-                        ["local"] = "ssh root@nexus-python run-python-root.sh {git-url} {command}",
+                        ["local"] = "ssh root@nexus-python bash run-python-root.sh {git-url} {command}",
                     }
                 }.Deserialize<JsonElement>(),
                 SourceConfiguration: new JsonObject()
