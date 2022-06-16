@@ -9,7 +9,7 @@ locked()
     exit 1
 }
 
-if (( $# < 3 )); then
+if (( $# < 2 )); then
     >&2 echo "${red}Illegal number of parameters${white}"
     exit 1
 fi
@@ -27,10 +27,10 @@ echo "Derived user id: ${green}$user_id${white}"
 
     # get or add user
     if id $user_id &>/dev/null; then
-        echo "User: ${green}exists${white}"
+        echo "User ${green}exists${white}"
         password=$(<"password-store/$user_id")
     else
-        echo "User: ${orange}does not exist${white}"
+        echo "User ${orange}does not exist${white}"
         password=$(cat /dev/urandom | tr -dc a-zA-Z0-9 | fold -w 14 | head -n 1)
         mkdir -p "password-store"
         echo $password > "password-store/$user_id"
@@ -40,7 +40,7 @@ echo "Derived user id: ${green}$user_id${white}"
 
     # continue as $user_id
     mkdir -p "/home/$user_id"
-    cd "/home/$user_id"
+    chown $user_id:$user_id "/home/$user_id"
     sudo -u $user_id bash run-python-user.sh "$@"
     
 ) 100>"/tmp/run-python-$user_id.lock"
