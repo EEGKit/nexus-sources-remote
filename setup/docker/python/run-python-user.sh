@@ -22,15 +22,14 @@ else
 fi
 
 # prepare python environment
-env="~/venv"
+if [ -d "requirements.txt" ]; then
+    env="~/venv"
 
-if [ ! -d $env ]; then 
-    python3 -m venv $env 
-fi
+    if [ ! -d $env ]; then 
+        python3 -m venv $env 
+    fi
 
-source $env/bin/activate
-
-if [ -d "requirements.txt" ]; then 
+    source $env/bin/activate
     python -m pip install -r "requirements.txt";
 fi
 
