@@ -4,7 +4,6 @@ orange=$'\e[0;33m'
 white=$'\e[0m'
 
 echo "Continue as: ${green}$(whoami)${white}"
-cd
 
 # check if git project exists
 if [ ! -d 'repository' ]; then

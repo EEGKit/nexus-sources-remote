@@ -38,10 +38,14 @@ echo "Derived user id: ${green}$user_id${white}"
         echo "Created user ${green}$user_id${white}"
     fi
 
-    # continue as $user_id
+    # prepare user folder
     mkdir -p "/home/$user_id"
-    chown $user_id:$user_id "/home/$user_id"
-    # sudo -u $user_id bash run-python-user.sh "$@"
-    su -c "bash run-python-user.sh $("$@")" $user_id
+    cp "run-python-user.sh" "/home/$user_id/run-python-user.sh"
+    chown -R $user_id:$user_id "/home/$user_id"
+    cd "/home/$user_id"
+
+    # continue as $user_id
+    command="bash run-python-user.sh $@"
+    su $user_id -c "$command"
     
 ) 100>"/tmp/run-python-$user_id.lock"
