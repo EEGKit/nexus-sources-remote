@@ -1,7 +1,7 @@
 1. Run the follow on the docker host:
 
 ```sh
-sudo setup-host.sh
+sudo bash setup-host.sh
 sudo docker-compose up -d
 ```
 
