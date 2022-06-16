@@ -93,6 +93,7 @@ namespace Nexus.Sources
                     if (!string.IsNullOrWhiteSpace(e.Data))
                         _logger.LogWarning(e.Data);
 
+                    File.AppendAllText("/var/log/mylog.txt", e.Data);
                     throw new Exception(e.Data);
                 };
 
