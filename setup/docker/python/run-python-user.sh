@@ -13,7 +13,7 @@ fi
 cd 'repository'
 
 if [ -d '.git' ]; then
-    echo "Pull changes"
+    echo "${green}Pull changes${white}"
     git fetch origin main
     git reset --hard origin/main
 else
@@ -23,6 +23,7 @@ fi
 
 # prepare python environment
 if [ -d "requirements.txt" ]; then
+    echo "${green}Set up virtual environment${white}"
     env="~/venv"
 
     if [ ! -d $env ]; then 
@@ -30,6 +31,8 @@ if [ -d "requirements.txt" ]; then
     fi
 
     source $env/bin/activate
+
+    echo "${green}Install requirements${white}"
     python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ -r "requirements.txt"
 fi
 
