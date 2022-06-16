@@ -7,7 +7,7 @@ services:
     image: mcr.microsoft.com/dotnet/sdk:6.0
     volumes:
       - /var/lib/nexus/docker/nexus-main/.ssh:/root/.ssh
-    entrypoint: bash -c "cd; curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/python/setup-main.sh'; source 'setup-test.sh'"
+    entrypoint: bash -c "cd; curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/python/setup-main.sh'; source 'setup-main.sh'"
     restart: always
 
   nexus-python:
