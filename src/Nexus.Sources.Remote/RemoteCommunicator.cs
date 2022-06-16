@@ -94,7 +94,6 @@ namespace Nexus.Sources
                         _logger.LogWarning(e.Data);
 
                     File.AppendAllText("/var/log/mylog.txt", e.Data);
-                    throw new Exception(e.Data);
                 };
 
                 _process.BeginErrorReadLine();
