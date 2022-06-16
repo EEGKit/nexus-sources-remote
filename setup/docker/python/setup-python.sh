@@ -11,7 +11,7 @@ service ssh start
 echo "${green}Setting up SSH server ... Done.${white}"
 
 echo "${green}Loading run-python.sh script ...${white}"
-wget -q 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/python/run-python.sh'
+wget -q -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/python/run-python.sh'
 echo "${green}Loading run-python.sh script ... Done${white}"
 
 trap : TERM INT
