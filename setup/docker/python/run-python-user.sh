@@ -29,7 +29,10 @@ if [ ! -d $env ]; then
 fi
 
 source $env/bin/activate
-python /data/bin/pip install -r requirements.txt;
+
+if [ -d "requirements.txt" ]; then 
+    python -m pip install -r "requirements.txt";
+fi
 
 # run user code (finally!)
 shift
