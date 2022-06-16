@@ -22,7 +22,8 @@ else
 fi
 
 # prepare python environment
-if [ -d "requirements.txt" ]; then
+pwd
+if [ -f "requirements.txt" ]; then
     echo "${green}Set up virtual environment${white}"
     env="~/venv"
 
