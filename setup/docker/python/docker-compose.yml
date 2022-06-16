@@ -1,0 +1,19 @@
+version: "3.7"
+
+services:
+
+  nexus-main:
+    container_name: nexus-main
+    image: ubuntu:20.04
+    volumes:
+      - /var/lib/nexus/docker/nexus-main/.ssh:/root/.ssh
+    entrypoint: bash -c "apt update; apt install wget -y; wget -q https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/python/setup-test.sh; source setup-test.sh"
+    restart: always
+
+  nexus-python:
+    container_name: nexus-python
+    image: python:3.9.0
+    volumes:
+      - /var/lib/nexus/docker/nexus-python/.ssh:/root/.ssh
+    entrypoint: bash -c "wget -q https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/python/setup-python.sh; source setup-python.sh"
+    restart: always
