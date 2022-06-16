@@ -41,6 +41,7 @@ echo "Derived user id: ${green}$user_id${white}"
     # continue as $user_id
     mkdir -p "/home/$user_id"
     chown $user_id:$user_id "/home/$user_id"
-    sudo -u $user_id bash run-python-user.sh "$@"
+    # sudo -u $user_id bash run-python-user.sh "$@"
+    su -c "bash run-python-user.sh $("$@")" $user_id
     
 ) 100>"/tmp/run-python-$user_id.lock"
