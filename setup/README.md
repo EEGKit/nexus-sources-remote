@@ -14,9 +14,7 @@ ssh-keygen -q -t rsa -N '' -f "${shared_folder_2}/.ssh/id_rsa" <<<y >/dev/null 2
 # exchange keys
 cat "${shared_ssh_folder_1}/.ssh/id_rsa.pub" > "${shared_ssh_folder_2}/.ssh/authorized_keys"
 
-echo "HashKnownHosts no" > "${shared_ssh_folder_1}/.ssh/config"
-
-echo "nexus-python ${cat "${shared_ssh_folder_2}/etc/ssh/server_ssh_host_rsa_key.pub"}" >>" ${shared_ssh_folder_1}/.ssh/known_hosts"
+echo "StrictHostKeyChecking accept-new" > "${shared_ssh_folder_1}/.ssh/config"
 ```
 
 2. Start containers
