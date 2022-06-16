@@ -34,7 +34,7 @@ if [ -f "requirements.txt" ]; then
     source $env/bin/activate
 
     echo "${green}Install requirements${white}"
-    python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ -r "requirements.txt"
+    python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ -r "requirements.txt" --disable-pip-version-check
 else
     echo "${orange}No requirements.txt found${white}"
 fi
