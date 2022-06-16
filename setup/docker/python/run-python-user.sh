@@ -21,6 +21,16 @@ else
     git clone $1 .
 fi
 
+# prepare python environment
+env="~/venv"
+
+if [ ! -d $env ]; then 
+    python3 -m venv $env 
+fi
+
+source $env/bin/activate
+python /data/bin/pip install -r requirements.txt;
+
 # run user code (finally!)
 shift
 $@
