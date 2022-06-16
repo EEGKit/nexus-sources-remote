@@ -17,7 +17,7 @@ if [ -d '.git' ]; then
     git fetch origin main
     git reset --hard origin/main
 else
-    echo "Clone repository ${yellow}$1${white}"
+    echo "Clone repository ${orange}$1${white}"
     git clone $1 .
 fi
 
@@ -35,7 +35,7 @@ if [ -d "requirements.txt" ]; then
     echo "${green}Install requirements${white}"
     python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ -r "requirements.txt"
 else
-    echo "${yellow}No requirements.txt found${white}"
+    echo "${orange}No requirements.txt found${white}"
 fi
 
 # run user code (finally!)
