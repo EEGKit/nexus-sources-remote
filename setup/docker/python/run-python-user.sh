@@ -34,6 +34,8 @@ if [ -d "requirements.txt" ]; then
 
     echo "${green}Install requirements${white}"
     python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ -r "requirements.txt"
+else
+    echo "${yellow}No requirements.txt found${white}"
 fi
 
 # run user code (finally!)
