@@ -30,7 +30,7 @@ if [ -d "requirements.txt" ]; then
     fi
 
     source $env/bin/activate
-    python -m pip install -r "requirements.txt";
+    python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ -r "requirements.txt"
 fi
 
 # run user code (finally!)
