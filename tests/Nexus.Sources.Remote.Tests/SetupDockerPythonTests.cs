@@ -68,6 +68,7 @@ namespace Nexus.Sources.Tests
                     ["listen-address"] = "0.0.0.0",
                     ["template"] = "local",
                     ["command"] = command,
+                    ["git-url"] = "https://github.com/Nexusforge/nexus-remoting-sample",                    
                     ["environment-variables"] = new JsonObject()
                     {
                         ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}"
