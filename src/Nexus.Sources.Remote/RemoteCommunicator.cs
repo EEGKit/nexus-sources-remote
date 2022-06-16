@@ -92,6 +92,8 @@ namespace Nexus.Sources
                 {
                     if (!string.IsNullOrWhiteSpace(e.Data))
                         _logger.LogWarning(e.Data);
+
+                    throw new Exception(e.Data);
                 };
 
                 _process.BeginErrorReadLine();
