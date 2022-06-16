@@ -198,6 +198,10 @@ class PythonDataSource(IDataSource):
             for i in range(0, len(request.status)):
                 request.status[i] = 1
 
+# args
+if len(sys.argv) < 3:
+    raise Exception(f"No argument for address and/or port was specified.")
+
 # get address
 address = sys.argv[1]
 
@@ -205,7 +209,7 @@ address = sys.argv[1]
 try:
     port = int(sys.argv[2])
 except Exception as ex:
-    raise Exception(f"The third command line argument must be a valid port number. Inner error: {str(ex)}")
+    raise Exception(f"The second command line argument must be a valid port number. Inner error: {str(ex)}")
 
 # run
 asyncio.run(RemoteCommunicator(PythonDataSource(), address, port).run())
