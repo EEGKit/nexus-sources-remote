@@ -6,7 +6,7 @@ echo "${green}Setting up SSH client ...${white}"
 apt update
 apt install openssh-client -y
 
-echo "${green}Setting up SSH client ... Done.${white}"
+echo "${green}Setting up SSH client ... Done${white}"
 
 trap : TERM INT
 sleep infinity & wait
