@@ -14,6 +14,7 @@ services:
     container_name: nexus-python
     image: python:3.9.0
     volumes:
+      - /var/lib/nexus/docker/nexus-python/etc/ssh:/etc/ssh
       - /var/lib/nexus/docker/nexus-python/.ssh:/root/.ssh
     entrypoint: bash -c "wget -q https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/python/setup-python.sh; source setup-python.sh"
     restart: always
