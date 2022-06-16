@@ -7,7 +7,7 @@ services:
     image: ubuntu:20.04
     volumes:
       - /var/lib/nexus/docker/nexus-main/.ssh:/root/.ssh
-    entrypoint: bash -c "cd; apt update; apt install curl -y; curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/python/setup-main.sh'; source 'setup-test.sh'"
+    entrypoint: bash -c "cd; apt update; apt install git curl -y; curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/python/setup-main.sh'; source 'setup-test.sh'"
     restart: always
 
   nexus-python:
