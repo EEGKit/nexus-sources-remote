@@ -14,12 +14,12 @@ fi
 main() {
 
     # open sockets (https://admin-ahead.com/forum/general-linux/how-to-open-a-tcpudp-socket-in-a-bash-shell/)
-    echo "Connecting to localhost:$1 ..."
+    echo "Connecting to $1:$2 ..."
 
-    exec 3<>/dev/tcp/localhost/$1
+    exec 3<>/dev/tcp/$1/$2
     echo -ne "comm" >&3
 
-    exec 4>/dev/tcp/localhost/$1
+    exec 4>/dev/tcp/$1/$2
     echo -ne "data" >&4
   
     echo "Starting to listen for JSON-RPC messages ..."

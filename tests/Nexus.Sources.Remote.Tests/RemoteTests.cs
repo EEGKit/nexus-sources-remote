@@ -13,9 +13,9 @@ namespace Nexus.Sources.Tests
     public class RemoteTests
     {
         [Theory]
-        [InlineData("python python/remote.py {remote-port}")]
+        [InlineData("python python/remote.py localhost {remote-port}")]
 #if LINUX
-        [InlineData("bash/remote.sh")]
+        [InlineData("bash/remote.sh localhost {remote-port}")]
 #endif
         public async Task ProvidesCatalog(string command)
         {
@@ -73,9 +73,9 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("python python/remote.py {remote-port}")]
+        [InlineData("python python/remote.py localhost {remote-port}")]
 #if LINUX
-        [InlineData("bash/remote.sh")]
+        [InlineData("bash/remote.sh localhost {remote-port}")]
 #endif
         public async Task CanProvideTimeRange(string command)
         {
@@ -94,9 +94,9 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("python python/remote.py {remote-port}")]
+        [InlineData("python python/remote.py localhost {remote-port}")]
 #if LINUX
-        [InlineData("bash/remote.sh")]
+        [InlineData("bash/remote.sh localhost {remote-port}")]
 #endif
         public async Task CanProvideAvailability(string command)
         {
@@ -113,9 +113,9 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("python python/remote.py {remote-port}", true)]
+        [InlineData("python python/remote.py localhost {remote-port}", true)]
 #if LINUX
-        [InlineData("bash/remote.sh", false)]
+        [InlineData("bash/remote.sh localhost {remote-port}", false)]
 #endif
         public async Task CanReadFullDay(string command, bool complexData)
         {
@@ -176,9 +176,9 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("python python/remote.py {remote-port}")]
+        [InlineData("python python/remote.py localhost {remote-port}")]
 #if LINUX
-        [InlineData("bash/remote.sh")]
+        [InlineData("bash/remote.sh localhost {remote-port}")]
 #endif
         public async Task CanLog(string command)
         {
@@ -201,7 +201,7 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("python python/remote.py {remote-port}")]
+        [InlineData("python python/remote.py localhost {remote-port}")]
         public async Task CanReadDataHandler(string command)
         {
             var dataSource = new Remote() as IDataSource;

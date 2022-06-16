@@ -1,7 +1,6 @@
 import asyncio
 import glob
 import os
-import re
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import Callable
@@ -200,13 +199,13 @@ class PythonDataSource(IDataSource):
                 request.status[i] = 1
 
 # get address
-address = "localhost"
+address = sys.argv[1]
 
 # get port
 try:
-    port = int(sys.argv[1])
+    port = int(sys.argv[2])
 except Exception as ex:
-    raise Exception(f"The second command line argument must be a valid port number. Inner error: {str(ex)}")
+    raise Exception(f"The third command line argument must be a valid port number. Inner error: {str(ex)}")
 
 # run
 asyncio.run(RemoteCommunicator(PythonDataSource(), address, port).run())
