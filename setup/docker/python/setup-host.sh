@@ -14,4 +14,4 @@ ssh-keygen -q -t rsa -N '' -f "${shared_folder_2}/.ssh/id_rsa" <<<y >/dev/null 2
 echo "${green}Populate authorized_keys and config file${white}"
 cat "${shared_folder_1}/.ssh/id_rsa.pub" > "${shared_folder_2}/.ssh/authorized_keys"
 echo "StrictHostKeyChecking no" > "${shared_folder_1}/.ssh/config"
-echo "UserKnownHostsFile=/dev/null" > "${shared_folder_1}/.ssh/config"
+echo "UserKnownHostsFile=/dev/null" >> "${shared_folder_1}/.ssh/config"
