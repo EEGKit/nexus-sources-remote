@@ -88,7 +88,7 @@ namespace Nexus.Sources
                 _process = new Process() { StartInfo = psi };
                 _process.Start();
 
-                _process.ErrorDataReceived += (sender, e) => 
+                _process.ErrorDataReceived += (sender, e) =>
                 {
                     if (!string.IsNullOrWhiteSpace(e.Data))
                         _logger.LogWarning(e.Data);

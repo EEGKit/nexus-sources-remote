@@ -120,7 +120,8 @@ class PythonDataSource(IDataSource):
         else:
             return self._read_and_modify_nexus_data(begin, end, requests, read_data, report_progress)
 
-    async def _read_local_files(self, 
+    async def _read_local_files(
+        self, 
         begin: datetime, 
         end: datetime,
         requests: list[ReadRequest], 
@@ -181,7 +182,8 @@ class PythonDataSource(IDataSource):
 
                 current_begin += timedelta(days = 1)
 
-    async def _read_and_modify_nexus_data(self, 
+    async def _read_and_modify_nexus_data(
+        self, 
         begin: datetime, 
         end: datetime,
         requests: list[ReadRequest],
@@ -200,7 +202,7 @@ class PythonDataSource(IDataSource):
 
 # args
 if len(sys.argv) < 3:
-    raise Exception(f"No argument for address and/or port was specified.")
+    raise Exception("No argument for address and/or port was specified.")
 
 # get address
 address = sys.argv[1]

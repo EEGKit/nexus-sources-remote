@@ -14,6 +14,7 @@ namespace Nexus.Sources.Tests
     public class RemoteTests
     {
         [Theory]
+        [InlineData("dotnet run --project csharp/remote.csproj localhost {remote-port}")]
         [InlineData("python python/remote.py localhost {remote-port}")]
 #if LINUX
         [InlineData("bash/remote.sh localhost {remote-port}")]
@@ -74,6 +75,7 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
+        [InlineData("dotnet run --project csharp/remote.csproj localhost {remote-port}")]
         [InlineData("python python/remote.py localhost {remote-port}")]
 #if LINUX
         [InlineData("bash/remote.sh localhost {remote-port}")]
@@ -95,6 +97,7 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
+        [InlineData("dotnet run --project csharp/remote.csproj localhost {remote-port}")]
         [InlineData("python python/remote.py localhost {remote-port}")]
 #if LINUX
         [InlineData("bash/remote.sh localhost {remote-port}")]
@@ -114,6 +117,7 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
+        [InlineData("dotnet run --project csharp/remote.csproj localhost {remote-port}", true)]
         [InlineData("python python/remote.py localhost {remote-port}", true)]
 #if LINUX
         [InlineData("bash/remote.sh localhost {remote-port}", false)]
@@ -177,6 +181,7 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
+        [InlineData("dotnet run --project csharp/remote.csproj localhost {remote-port}")]
         [InlineData("python python/remote.py localhost {remote-port}")]
 #if LINUX
         [InlineData("bash/remote.sh localhost {remote-port}")]
@@ -202,6 +207,7 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
+        [InlineData("dotnet run --project csharp/remote.csproj localhost {remote-port}")]
         [InlineData("python python/remote.py localhost {remote-port}")]
         public async Task CanReadDataHandler(string command)
         {
@@ -267,6 +273,7 @@ namespace Nexus.Sources.Tests
                 SourceConfiguration: new JsonObject()
                 {
                     ["listen-address"] = "127.0.0.1",
+                    ["listen-port-min"] = "63000",
                     ["template"] = "local",
                     ["command"] = command,
                     ["environment-variables"] = new JsonObject()

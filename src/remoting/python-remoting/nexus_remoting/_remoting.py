@@ -3,7 +3,7 @@ import socket
 import struct
 from datetime import datetime
 from threading import Lock
-from typing import Any, Dict, cast
+from typing import Any, Dict, Optional, Tuple, cast
 from urllib.parse import urlparse
 
 from nexus_extensibility import (CatalogItem, DataSourceContext,
@@ -24,8 +24,8 @@ class _Logger(ILogger):
 
     _tcp_comm_socket: socket.socket
 
-    def __init__(self, tcp_socket: socket.socket):
-        self._tcp_comm_socket = tcp_socket
+    def __init__(self, tcp_comm_socket: socket.socket):
+        self._tcp_comm_socket = tcp_comm_socket
 
     def log(self, log_level: LogLevel, message: str):
 
@@ -42,7 +42,7 @@ class RemoteCommunicator:
 
     def __init__(self, data_source: IDataSource, address: str, port: int):
         """
-        Initializes a new instance of the RemoteCommunicator
+        Initializes a new instance of the RemoteCommunicator.
         
             Args:
                 data_source: The data source.
@@ -62,7 +62,7 @@ class RemoteCommunicator:
 
     async def run(self):
         """
-        Starts the remoting operation
+        Starts the remoting operation.
         """
 
         # comm connection
@@ -79,7 +79,7 @@ class RemoteCommunicator:
             # https://www.jsonrpc.org/specification
 
             # get request message
-            size = _read_size(self._tcp_comm_socket)
+            size = self._read_size(self._tcp_comm_socket)
             json_request = self._tcp_comm_socket.recv(size, socket.MSG_WAITALL)
 
             if len(json_request) == 0:
@@ -88,9 +88,9 @@ class RemoteCommunicator:
             request: Dict[str, Any] = json.loads(json_request)
 
             # process message
-            data = None
-            status = None
-            response: Dict[str, Any]
+            data: Optional[object] = None
+            status: Optional[memoryview] = None
+            response: Optional[Dict[str, Any]]
 
             if "jsonrpc" in request and request["jsonrpc"] == "2.0":
 
@@ -129,11 +129,12 @@ class RemoteCommunicator:
                 self._tcp_data_socket.sendall(data)
                 self._tcp_data_socket.sendall(status)
 
-    async def _process_invocation(self, request: dict[str, Any]):
+    async def _process_invocation(self, request: dict[str, Any]) \
+        -> Tuple[Optional[Dict[str, Any]], Optional[memoryview], Optional[memoryview]]:
         
-        result = None
-        data = None
-        status = None
+        result: Optional[Dict[str, Any]] = None
+        data: Optional[memoryview] = None
+        status: Optional[memoryview] = None
 
         method_name = request["method"]
         params = cast(list[Any], request["params"])
@@ -156,7 +157,7 @@ class RemoteCommunicator:
                 if "sourceConfiguration" in raw_context else None
 
             request_configuration = raw_context["requestConfiguration"] \
-                if "requestonfiguration" in raw_context else None
+                if "requestConfiguration" in raw_context else None
 
             logger = _Logger(self._tcp_comm_socket)
 
@@ -251,7 +252,7 @@ class RemoteCommunicator:
 
         _send_to_server(read_data_request, self._tcp_comm_socket)
 
-        size = _read_size(self._tcp_data_socket)
+        size = self._read_size(self._tcp_data_socket)
         data = self._tcp_data_socket.recv(size, socket.MSG_WAITALL)
 
         if len(data) == 0:
@@ -262,15 +263,14 @@ class RemoteCommunicator:
     def _handle_report_progress(self, progress_value: float):
         pass # not implemented
 
-def _read_size(current_socket: socket.socket):
-    size_buffer = current_socket.recv(4, socket.MSG_WAITALL)
+    def _read_size(self, current_socket: socket.socket) -> int:
+        size_buffer = current_socket.recv(4, socket.MSG_WAITALL)
 
-    if len(size_buffer) == 0:
-        _shutdown()
+        if len(size_buffer) == 0:
+            _shutdown()
 
-    size = struct.unpack(">I", size_buffer)[0]
-
-    return size
+        size = struct.unpack(">I", size_buffer)[0]
+        return size
 
 def _send_to_server(message: Any, current_socket: socket.socket):
     encoded = JsonEncoder.encode(message, _json_encoder_options)

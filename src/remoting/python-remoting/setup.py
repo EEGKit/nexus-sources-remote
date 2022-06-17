@@ -42,7 +42,7 @@ with open("../../../src/Directory.Build.props", "r") as fh:
 setuptools.setup(
     name="nexus-remoting",
     version=str(os.getenv("PYPI_VERSION")),
-    description="Remote client for the Nexus system.",
+    description="This package contains types to easily implement a Nexus.Sources.Remote client for the Nexus software (a GUI for time-series data lakes).",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author=author,

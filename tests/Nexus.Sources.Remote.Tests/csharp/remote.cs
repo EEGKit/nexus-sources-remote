@@ -1,0 +1,269 @@
+﻿using System.Globalization;
+using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
+using Nexus.DataModel;
+using Nexus.Extensibility;
+using Nexus.Remoting;
+
+namespace Nexus.Remote;
+
+#warning Inherit from StructuredFileDataSource would be possible but collides with ReadAndModifyNexusData method"
+
+public static class Program
+{
+    public static async Task Main(string[] args)
+    {
+        // args
+        if (args.Length < 2)
+            throw new Exception("No argument for address and/or port was specified.");
+
+        // get address
+        var address = args[0];
+
+        // get port
+        int port;
+
+        try
+        {
+            port = int.Parse(args[1]);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"The second command line argument must be a valid port number. Inner error: {ex.ToString()}");
+        }
+
+        var communicator = new RemoteCommunicator(new CsDataSource(), address, port);
+        await communicator.RunAsync();
+    }
+}
+
+public class CsDataSource : IDataSource
+{
+    private DataSourceContext _context = default!;
+
+    public Task SetContextAsync(DataSourceContext context, ILogger logger, CancellationToken cancellationToken)
+    {
+        _context = context;
+
+        if (context.ResourceLocator.Scheme != "file")
+            throw new Exception($"Expected 'file' URI scheme, but got '{context.ResourceLocator.Scheme}'.");
+
+        logger.LogInformation("Logging works!");
+        return Task.CompletedTask;
+    }
+
+    public Task<CatalogRegistration[]> GetCatalogRegistrationsAsync(string path, CancellationToken cancellationToken)
+    {
+        if (path == "/")
+            return Task.FromResult(new CatalogRegistration[]
+                {
+                    new CatalogRegistration("/A/B/C", "Test catalog /A/B/C."),
+                    new CatalogRegistration("/D/E/F", "Test catalog /D/E/F."),
+                });
+
+        else
+            return Task.FromResult(new CatalogRegistration[0]);
+    }
+
+    public Task<ResourceCatalog> GetCatalogAsync(string catalogId, CancellationToken cancellationToken)
+    {
+        ResourceCatalog catalog;
+
+        if (catalogId == "/A/B/C")
+        {
+            var representation1 = new Representation(NexusDataType.INT64, TimeSpan.FromSeconds(1));
+
+            var resource1 = new ResourceBuilder("resource1")
+                .WithUnit("°C")
+                .WithGroups("group1")
+                .AddRepresentation(representation1)
+                .Build();
+
+            var representation2 = new Representation(NexusDataType.FLOAT64, TimeSpan.FromSeconds(1));
+
+            var resource2 = new ResourceBuilder("resource2")
+                .WithUnit("bar")
+                .WithGroups("group2")
+                .AddRepresentation(representation2)
+                .Build();
+
+            catalog = new ResourceCatalogBuilder("/A/B/C")
+                .WithProperty("a", "b")
+                .AddResources(resource1, resource2)
+                .Build();
+        }
+        else if (catalogId == "/D/E/F")
+        {
+            var representation = new Representation(NexusDataType.FLOAT64, TimeSpan.FromSeconds(1));
+
+            var resource = new ResourceBuilder("resource1")
+                .WithUnit("m/s")
+                .WithGroups("group1")
+                .AddRepresentation(representation)
+                .Build();
+
+            catalog = new ResourceCatalogBuilder("/D/E/F")
+                .AddResource(resource)
+                .Build();
+        }
+
+        else
+            throw new Exception("Unknown catalog ID.");
+        
+        return Task.FromResult(catalog);
+    }
+
+    public Task<(DateTime Begin, DateTime End)> GetTimeRangeAsync(string catalogId, CancellationToken cancellationToken)
+    {
+        if (catalogId != "/A/B/C")
+            throw new Exception("Unknown catalog ID.");
+
+        var filePaths = Directory.GetFiles(_context.ResourceLocator.ToPath(), "*.dat", SearchOption.AllDirectories);
+        var fileNames = filePaths.Select(filePath => Path.GetFileName(filePath));
+
+        var dateTimes = fileNames
+            .Select(fileName => DateTime.SpecifyKind(
+                DateTime.ParseExact(
+                    fileName,
+                    "yyyy-MM-dd_HH-mm-ss'.dat'",
+                    CultureInfo.InvariantCulture),
+                DateTimeKind.Utc))
+            .OrderBy(dateTime => dateTime)
+            .ToList();
+
+        return Task.FromResult((dateTimes[0], dateTimes[^1]));
+
+    }
+
+    public Task<double> GetAvailabilityAsync(string catalogId, DateTime begin, DateTime end, CancellationToken cancellationToken)
+    {
+        if (catalogId != "/A/B/C")
+            throw new Exception("Unknown catalog ID.");
+
+        var periodPerFile = TimeSpan.FromMinutes(10);
+        var maxFileCount = (end - begin).Ticks / periodPerFile.Ticks;
+        var filePaths = Directory.GetFiles(_context.ResourceLocator.ToPath(), "*.dat", SearchOption.AllDirectories);
+        var fileNames = filePaths.Select(filePath => Path.GetFileName(filePath));
+
+        var actualFileCount = fileNames
+            .Select(fileName => DateTime.SpecifyKind(
+                DateTime.ParseExact(
+                    fileName,
+                    "yyyy-MM-dd_HH-mm-ss'.dat'",
+                    CultureInfo.InvariantCulture),
+                DateTimeKind.Utc))
+            .Where(current => current >= begin && current < end)
+            .Count();
+
+        return Task.FromResult(actualFileCount / (double)maxFileCount);
+    }
+
+    public Task ReadAsync(
+        DateTime begin,
+        DateTime end,
+        ReadRequest[] requests,
+        ReadDataHandler readData,
+        IProgress<double> progress,
+        CancellationToken cancellationToken)
+    {
+        if (requests[0].CatalogItem.Catalog.Id == "/A/B/C")
+            return ReadLocalFiles(
+                begin, end, requests, progress, cancellationToken);
+
+        else
+            return ReadAndModifyNexusData(
+                begin, end, requests, readData, progress, cancellationToken);
+    }
+
+    private async Task ReadLocalFiles(
+        DateTime begin,
+        DateTime end,
+        ReadRequest[] requests,
+        IProgress<double> progress,
+        CancellationToken cancellationToken
+    )
+    {
+        // ############################################################################
+        // Warning! This is a simplified implementation and not generally applicable! #
+        // ############################################################################
+
+        // The test files are located in a folder hierarchy where each has a length of 
+        // 10-minutes (600 s):
+        // ...
+        // TESTDATA/2020-01/2020-01-02/2020-01-02_00-00-00.dat
+        // TESTDATA/2020-01/2020-01-02/2020-01-02_00-10-00.dat
+        // ...
+        // The data itself is made up of progressing timestamps (unix time represented 
+        // stored as 8 byte little-endian integers) with a sample rate of 1 Hz.
+
+        foreach (var request in requests)
+        {
+            var samplesPerSecond = (int)(1 / request.CatalogItem.Representation.SamplePeriod.TotalSeconds);
+            var secondsPerFile = 600;
+            var typeSize = 8;
+
+            // go
+            var currentBegin = begin;
+
+            while (currentBegin < end)
+            {
+                // find files
+                var searchPath = Path.Combine(_context.ResourceLocator.ToPath(), currentBegin.ToString("yyyy-MM"), currentBegin.ToString("yyyy-MM-dd"));
+                var filePaths = Directory.GetFiles(searchPath, "*.dat", SearchOption.AllDirectories);
+
+                foreach (var filePath in filePaths)
+                {
+                    var fileName = Path.GetFileName(filePath);
+                    var fileBegin = DateTime.ParseExact(fileName, "yyyy-MM-dd_HH-mm-ss'.dat'", CultureInfo.InvariantCulture);
+
+                    // if file date/time is within the limits
+                    if (fileBegin >= currentBegin && fileBegin < end)
+                    {
+                        // compute target offset and file length
+                        var targetOffset = (int)((fileBegin - begin).TotalSeconds) * samplesPerSecond;
+                        var fileLength = samplesPerSecond * secondsPerFile;
+
+                        // load and copy binary data
+                        var fileData = await File.ReadAllBytesAsync(filePath, cancellationToken);
+                        throw new System.Exception(targetOffset.ToString());
+                        fileData
+                            .CopyTo(request.Data.Slice(targetOffset * typeSize));
+
+                        // set status to 1 for all written data
+                        request.Status.Slice(targetOffset).Span.Fill(1);
+                    }
+                }
+
+                currentBegin += TimeSpan.FromDays(1);
+            }
+        }
+    }
+
+    private async Task ReadAndModifyNexusData(
+        DateTime begin,
+        DateTime end,
+        ReadRequest[] requests,
+        ReadDataHandler readData,
+        IProgress<double> progress,
+        CancellationToken cancellationToken
+    )
+    {
+        void GenerateData(ReadRequest request, ReadOnlySpan<double> dataFromNexus)
+        {
+            var doubleData = MemoryMarshal.Cast<byte, double>(request.Data.Span);
+
+            for (int i = 0; i < doubleData.Length; i++)
+            {
+                doubleData[i] = dataFromNexus[i] * 2;
+            }
+
+            request.Status.Span.Fill(1);
+        }
+
+        foreach (var request in requests)
+        {
+            var dataFromNexus = await readData("/need/more/data", begin, end, cancellationToken);
+            GenerateData(request, dataFromNexus.Span);
+        }
+    }
+}
