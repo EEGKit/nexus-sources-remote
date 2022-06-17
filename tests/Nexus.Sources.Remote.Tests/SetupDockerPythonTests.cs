@@ -60,7 +60,7 @@ namespace Nexus.Sources.Tests
                 {
                     ["remote-templates"] = new JsonObject()
                     {
-                        ["local"] = "ssh root@nexus-python run.sh {git-url} {command}",
+                        ["local"] = "ssh root@nexus-python bash run.sh {git-url} {command}",
                     }
                 }.Deserialize<JsonElement>(),
                 SourceConfiguration: new JsonObject()
@@ -68,6 +68,7 @@ namespace Nexus.Sources.Tests
                     ["listen-address"] = "0.0.0.0",
                     ["template"] = "local",
                     ["command"] = command,
+                    ["git-url"] = "https://github.com/Nexusforge/nexus-remoting-sample",                    
                     ["environment-variables"] = new JsonObject()
                     {
                         ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}"

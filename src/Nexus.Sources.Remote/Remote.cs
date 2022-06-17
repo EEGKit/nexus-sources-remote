@@ -240,7 +240,7 @@ namespace Nexus.Sources
             if (template is null)
                 throw new Exception($"The template {templateId} does not exist.");
 
-            var command = Regex.Replace(template, "{(.*)}", match => 
+            var command = Regex.Replace(template, "{(.*?)}", match => 
             {
                 var parameterKey = match.Groups[1].Value;
 
