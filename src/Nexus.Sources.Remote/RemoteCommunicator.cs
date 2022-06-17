@@ -49,7 +49,7 @@ namespace Nexus.Sources
             _logger = logger;
 
             var listenPort = GetNextUnusedPort(listenPortMin, listenPortMax);
-            
+
             command = Regex.Replace(command, "{remote-port}", listenPort.ToString());
             var commandParts = command.Split(" ", count: 2);
             _command = commandParts[0];

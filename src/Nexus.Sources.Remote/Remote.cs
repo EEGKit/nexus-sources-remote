@@ -66,20 +66,20 @@ namespace Nexus.Sources
             var listenAddressString = GetStringValueOrDefault("listen-address", "0.0.0.0", Context.SourceConfiguration);
 
             if (!IPAddress.TryParse(listenAddressString, out var listenAddress))
-                throw new KeyNotFoundException("The listen-address parameter is not a valid IP-Address.");
+                throw new ArgumentException("The listen-address parameter is not a valid IP-Address.");
 
             // listen-port
             var defaultMin = 49152;
             var listenPortMin = GetIntValueOrDefault("listen-port-min", defaultMin, Context.SourceConfiguration);
 
             if (!(1 <= listenPortMin && listenPortMin < 65536))
-                throw new KeyNotFoundException("The listen-port-min parameter is invalid.");
+                throw new ArgumentException("The listen-port-min parameter is invalid.");
 
             var defaultMax = 65536;
             var listenPortMax = GetIntValueOrDefault("listen-port-max", defaultMax, Context.SourceConfiguration);
 
             if (!(1 <= listenPortMin && listenPortMin < 65536))
-                throw new KeyNotFoundException("The listen-port-max parameter is invalid.");
+                throw new ArgumentException("The listen-port-max parameter is invalid.");
 
             // template
             if (!TryGetStringValue("template", Context.SourceConfiguration, out var templateId))
