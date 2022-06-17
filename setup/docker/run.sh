@@ -28,7 +28,7 @@ echo "Derived user id: ${green}$user_id${white}"
     # get or add user
     if id $user_id &>/dev/null; then
         echo "User ${green}exists${white}"
-        password=$(<"password-store/$user_id")
+        # password=$(<"password-store/$user_id")
     else
         echo "User ${orange}does not exist${white}"
         password=$(cat /dev/urandom | tr -dc a-zA-Z0-9 | fold -w 14 | head -n 1)
@@ -40,12 +40,13 @@ echo "Derived user id: ${green}$user_id${white}"
 
     # prepare user folder
     mkdir -p "/home/$user_id"
-    cp "run-python-user.sh" "/home/$user_id/run-python-user.sh"
+    cp "run-user.sh" "/home/$user_id/run-user.sh"
+    cp "satellite.sh" "/home/$user_id/satellite.sh"
     chown -R $user_id:$user_id "/home/$user_id"
     cd "/home/$user_id"
-
-    # continue as $user_id
-    command="bash run-python-user.sh $@"
-    su $user_id -c "$command"
     
-) 100>"/tmp/run-python-$user_id.lock"
+) 100>"/tmp/run-$user_id.lock"
+
+# continue as $user_id
+command="bash run-user.sh $@"
+su $user_id -c "$command"
