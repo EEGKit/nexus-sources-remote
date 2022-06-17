@@ -13,5 +13,8 @@ curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/ma
 curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/run-user.sh'
 curl -s -O "https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/${satellite_id}/satellite.sh"
 
+mkdir -p /var/lib/nexus
+touch "/var/lib/nexus/ready"
+
 trap : TERM INT
 sleep infinity & wait

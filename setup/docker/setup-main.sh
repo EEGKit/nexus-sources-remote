@@ -10,5 +10,8 @@ echo "Clone repository ${green}https://github.com/Nexusforge/nexus-sources-remot
 git clone https://github.com/Nexusforge/nexus-sources-remote
 cd nexus-sources-remote
 
+mkdir -p /var/lib/nexus
+touch "/var/lib/nexus/ready"
+
 trap : TERM INT
 sleep infinity & wait
