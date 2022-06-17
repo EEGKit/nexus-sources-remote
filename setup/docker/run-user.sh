@@ -4,14 +4,14 @@ white=$'\e[0m'
 
 echo "Continue as: ${green}$(whoami)${white}"
 
+# check if git project exists
+if [ ! -d 'repository' ]; then
+    mkdir -p 'repository'
+fi
+
+cd 'repository'
+
 (
-    # check if git project exists
-    if [ ! -d 'repository' ]; then
-        mkdir -p 'repository'
-    fi
-
-    cd 'repository'
-
     if [ -d '.git' ]; then
         echo "${green}Pull changes${white}"
         git fetch origin main
