@@ -43,10 +43,10 @@ echo "Derived user id: ${green}$user_id${white}"
     cp "run-user.sh" "/home/$user_id/run-user.sh"
     cp "satellite.sh" "/home/$user_id/satellite.sh"
     chown -R $user_id:$user_id "/home/$user_id"
-    cd "/home/$user_id"
     
 ) 100>"/tmp/run-$user_id.lock"
 
 # continue as $user_id
+cd "/home/$user_id"
 command="bash run-user.sh $@"
 su $user_id -c "$command"

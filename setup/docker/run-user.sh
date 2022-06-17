@@ -24,4 +24,4 @@ echo "Continue as: ${green}$(whoami)${white}"
     
 ) 100>"/tmp/run-user-$user_id.lock"
 
-source satellite.sh
+source "satellite.sh"

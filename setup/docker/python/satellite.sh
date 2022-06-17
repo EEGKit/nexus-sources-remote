@@ -2,6 +2,8 @@ green=$'\e[0;32m'
 orange=$'\e[0;33m'
 white=$'\e[0m'
 
+echo "${green}Welcome to the satellite.sh file!${white}"
+
 # prepare python environment
 if [ -f "requirements.txt" ]; then
     echo "${green}Set up virtual environment${white}"

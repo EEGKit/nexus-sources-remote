@@ -11,5 +11,5 @@ sudo docker-compose --env-file python/.env up -d
 
 ```sh
 sudo docker exec nexus-main \
-    bash -c "cd /root/nexus-sources-remote; dotnet build; dotnet test --filter Nexus.Sources.Tests.SetupDockerPythonTests"
+    bash -c "cd /root/nexus-sources-remote; dotnet test --filter Nexus.Sources.Tests.SetupDockerPythonTests"
 ```
