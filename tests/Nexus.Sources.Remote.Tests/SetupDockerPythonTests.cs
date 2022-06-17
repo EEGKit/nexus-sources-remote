@@ -7,6 +7,7 @@ using Xunit;
 
 namespace Nexus.Sources.Tests
 {
+    [TestCategory("docker")]
     public class SetupDockerPythonTests
     {
 #if LINUX

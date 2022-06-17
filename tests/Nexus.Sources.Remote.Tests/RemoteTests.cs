@@ -10,6 +10,7 @@ using Xunit;
 
 namespace Nexus.Sources.Tests
 {
+    [TestCategory("local")]
     public class RemoteTests
     {
         [Theory]
