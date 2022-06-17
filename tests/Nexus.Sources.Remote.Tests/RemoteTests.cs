@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Nexus.Sources.Tests
 {
-    [Trait("Category", "local")]
+    [Trait("TestCategory", "local")]
     public class RemoteTests
     {
         [Theory]
@@ -266,7 +266,7 @@ namespace Nexus.Sources.Tests
                 }.Deserialize<JsonElement>(),
                 SourceConfiguration: new JsonObject()
                 {
-                    ["listen-address"] = "0.0.0.0",
+                    ["listen-address"] = "127.0.0.1",
                     ["template"] = "local",
                     ["command"] = command,
                     ["environment-variables"] = new JsonObject()

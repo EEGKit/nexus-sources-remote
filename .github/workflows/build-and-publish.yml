@@ -56,9 +56,10 @@ jobs:
 
       - name: Test
         run: |
-         dotnet test -c Release /p:BuildProjectReferences=false --filter Category=local
+         dotnet test -c Release /p:BuildProjectReferences=false --filter TestCategory=local
          pyright
          pytest
+         sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerPythonTests.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3

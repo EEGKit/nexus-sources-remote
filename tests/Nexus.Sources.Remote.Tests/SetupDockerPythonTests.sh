@@ -13,4 +13,4 @@ while true; do
    sleep 1;
 done
 
-docker exec nexus-main bash -c "cd /root/nexus-sources-remote; dotnet test --filter Category=docker
+docker exec nexus-main bash -c "cd /root/nexus-sources-remote; dotnet test --filter TestCategory=docker
