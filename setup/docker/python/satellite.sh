@@ -21,6 +21,8 @@ else
     echo "${orange}No requirements.txt found${white}"
 fi
 
+echo "${green}Run user code${white}"
+
 # run user code (finally!)
 shift
 $@

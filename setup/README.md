@@ -1,3 +1,5 @@
+# How to run the test:
+
 1. `cd` into the `setup/docker` folder
 
 2. Run the follow on the docker host:
