@@ -24,4 +24,4 @@ cd 'repository'
     
 ) 100>"/tmp/run-user-$user_id.lock"
 
-source "satellite.sh"
+source "../satellite.sh"
