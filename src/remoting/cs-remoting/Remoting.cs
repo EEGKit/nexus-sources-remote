@@ -278,10 +278,10 @@ public class RemoteCommunicator
         else if (methodName == "readSingle")
         {
             var beginString = @params[0].GetString()!;
-            var begin = DateTime.ParseExact(beginString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+            var begin = DateTime.ParseExact(beginString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture).ToUniversalTime();
 
             var endString = @params[1].GetString()!;
-            var end = DateTime.ParseExact(endString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+            var end = DateTime.ParseExact(endString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture).ToUniversalTime();
 
             var catalogItem = JsonSerializer.Deserialize<CatalogItem>(@params[2], Utilities.Options)!;
             (data, status) = ExtensibilityUtilities.CreateBuffers(catalogItem.Representation, begin, end);

@@ -214,7 +214,7 @@ public class CsDataSource : IDataSource
                 foreach (var filePath in filePaths)
                 {
                     var fileName = Path.GetFileName(filePath);
-                    var fileBegin = DateTime.ParseExact(fileName, "yyyy-MM-dd_HH-mm-ss'.dat'", CultureInfo.InvariantCulture);
+                    var fileBegin = DateTime.SpecifyKind(DateTime.ParseExact(fileName, "yyyy-MM-dd_HH-mm-ss'.dat'", CultureInfo.InvariantCulture), DateTimeKind.Utc);
 
                     // if file date/time is within the limits
                     if (fileBegin >= currentBegin && fileBegin < end)
@@ -225,12 +225,12 @@ public class CsDataSource : IDataSource
 
                         // load and copy binary data
                         var fileData = await File.ReadAllBytesAsync(filePath, cancellationToken);
-                        throw new System.Exception(targetOffset.ToString());
+
                         fileData
                             .CopyTo(request.Data.Slice(targetOffset * typeSize));
 
                         // set status to 1 for all written data
-                        request.Status.Slice(targetOffset).Span.Fill(1);
+                        request.Status.Slice(targetOffset, fileLength).Span.Fill(1);
                     }
                 }
 
