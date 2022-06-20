@@ -1,6 +1,8 @@
+set -e
+
 green=$'\e[0;32m'
 white=$'\e[0m'
-echo "${green}Welcome to the setup-${satellite_id} script"'!'"${white}"
+echo "${green}Welcome to the setup-${satellite_id}.sh script"'!'"${white}"
 
 echo "${green}Set up SSH server${white}"
 apt update

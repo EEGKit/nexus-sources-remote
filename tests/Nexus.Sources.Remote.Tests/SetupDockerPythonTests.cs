@@ -16,7 +16,7 @@ namespace Nexus.Sources.Tests
         public async Task CanReadFullDay()
         {
             var dataSource = new Remote() as IDataSource;
-            var command = "python main.py nexus-main {remote-port}";
+            var command = "main.py nexus-main {remote-port}";
             var context = CreateContext(command);
 
             await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);

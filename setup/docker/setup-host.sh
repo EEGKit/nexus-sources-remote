@@ -6,7 +6,7 @@ satellite_id=$1
 # Generate key for main container and add config file, but do not override if it already exists
 main_folder='/var/lib/nexus/docker/nexus-main'
 
-if [ ! -d '/var/lib/nexus/docker/nexus-main' ]; then   
+if [[ ! -d '/var/lib/nexus/docker/nexus-main' ]]; then   
     echo "Generate SSH key for container ${green}nexus-main${white}"
     mkdir -p "${main_folder}/.ssh"
     ssh-keygen -q -t rsa -N '' -f "${main_folder}/.ssh/id_rsa" <<<y >/dev/null 2>&1
