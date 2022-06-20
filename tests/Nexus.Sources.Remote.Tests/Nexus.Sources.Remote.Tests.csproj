@@ -9,14 +9,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="csharp\remote.cs" />
+    <Compile Remove="dotnet\remote.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="csharp\remote.cs">
+    <None Include="dotnet\remote.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="csharp\remote.csproj">
+    <None Include="dotnet\remote.csproj">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -15,6 +15,7 @@ fi
 echo "Activate virtual environment ${green}${env}${white}"
 source $env/bin/activate
 
+# requirements
 if [ -f "requirements.txt" ]; then
 
     if [ -f "../commit_changed" ]; then
@@ -27,7 +28,6 @@ else
 fi
 
 # run user code
-echo "${green}Run user code${white}"
-
 shift
+echo "Run command${green}python $@${white}"
 python $@

@@ -13,7 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{EDF00961
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "remoting", "remoting", "{59CBCE56-7832-4B55-854F-C9B5E4FBEA86}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "cs-remoting", "src\remoting\cs-remoting\cs-remoting.csproj", "{FC047115-277B-448E-854F-275B5B8343A5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-remoting", "src\remoting\dotnet-remoting\dotnet-remoting.csproj", "{FC047115-277B-448E-854F-275B5B8343A5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
