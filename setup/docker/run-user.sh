@@ -24,6 +24,7 @@ cd 'repository'
     fi
 
     commit_new=$(git show --format="%H" --no-patch)
+    echo "Current commit is ${green}${commit_new}${white}"
 
     if [[ "$commit_new" != "$commit_old" ]]; then
         touch "../commit_changed"
