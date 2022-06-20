@@ -25,7 +25,7 @@ cd 'repository'
 
     commit_new=$(git show --format="%H" --no-patch)
 
-    if [[ commit_new != commit_old ]]; then
+    if [[ "$commit_new" != "$commit_old" ]]; then
         touch "../commit_changed"
     else
         rm --force "../commit_changed"

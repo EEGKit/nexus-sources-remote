@@ -32,17 +32,17 @@ echo "Derived user id: ${green}$user_id${white}"
     else
         echo "User ${orange}does not exist${white}"
         password=$(cat /dev/urandom | tr -dc a-zA-Z0-9 | fold -w 14 | head -n 1)
-        mkdir -p "password-store"
+        mkdir --parents "password-store"
         echo $password > "password-store/$user_id"
-        useradd -p $password $user_id
+        useradd --password $password $user_id
         echo "Created user ${green}$user_id${white}"
     fi
 
     # prepare user folder
-    mkdir -p "/home/$user_id"
-    cp "run-user.sh" "/home/$user_id/run-user.sh"
-    cp "satellite.sh" "/home/$user_id/satellite.sh"
-    chown -R $user_id:$user_id "/home/$user_id"
+    mkdir --parents "/home/$user_id"
+    cp --force "run-user.sh" "/home/$user_id/run-user.sh"
+    cp --force "satellite.sh" "/home/$user_id/satellite.sh"
+    chown --recursive $user_id:$user_id "/home/$user_id"
     
 ) 100>"/tmp/run-$user_id.lock"
 
