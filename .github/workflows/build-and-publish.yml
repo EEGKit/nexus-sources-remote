@@ -33,6 +33,10 @@ jobs:
           echo "VERSION=$(python build/print_version.py       ${{ github.run_number }} ${{ env.IS_RELEASE }} false)" >> $GITHUB_ENV
           echo "PYPI_VERSION=$(python build/print_version.py  ${{ github.run_number }} ${{ env.IS_RELEASE }} true)"  >> $GITHUB_ENV
 
+      - name: Extract annotation tag
+        if: ${{ env.IS_RELEASE == 'true' }}
+        run: python build/create_tag_body.py
+
       - name: Set up Python 
         uses: actions/setup-python@v3
         with:
@@ -125,13 +129,10 @@ jobs:
           name: artifacts
           path: artifacts
 
-      - name: Annotation Tag
-        run: python build/create_tag_body.py
-
       - name: GitHub Release Artifacts
         uses: softprops/action-gh-release@v1
         with:
-          body_path: tag_body.txt
+          body_path: artifacts/tag_body.txt
           files: artifacts/publish/assets.tar.gz
 
       - name: Nuget package (Nuget)
