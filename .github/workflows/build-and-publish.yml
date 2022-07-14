@@ -51,7 +51,8 @@ jobs:
 
       - name: Build
         run: |
-          dotnet publish -c Release -o publish /p:Version=${{ env.VERSION }} /p:GeneratePackage=true src/Nexus.Sources.Remote/Nexus.Sources.Remote.csproj
+          dotnet publish -c Release -o publish /p:Version=${{ env.VERSION }} src/Nexus.Sources.Remote/Nexus.Sources.Remote.csproj
+          dotnet build -c Release /p:Version=${{ env.VERSION }} /p:GeneratePackage=true src/dotnet-remoting/dotnet-remoting.csproj
           python -m build --wheel --outdir artifacts/packages --no-isolation src/remoting/python-remoting
 
       - name: Test
