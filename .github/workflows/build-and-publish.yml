@@ -142,6 +142,6 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
       - name: Python Package (PyPI)
-        run: twine upload artifacts/packages/*.whl -u__token__ -p"${PYPI_API_KEY}"
+        run: python -m twine upload artifacts/packages/*.whl -u__token__ -p"${PYPI_API_KEY}"
         env:
           PYPI_API_KEY: ${{ secrets.PYPI_API_KEY }}
