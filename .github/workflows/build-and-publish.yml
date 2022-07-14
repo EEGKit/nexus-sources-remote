@@ -40,10 +40,10 @@ jobs:
 
       - name: Install
         run: |
-         sudo apt install jq
-         npm install -g pyright
-         python -m pip install build wheel pytest pytest-asyncio
-         python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ nexus-extensibility
+          sudo apt install jq
+          npm install -g pyright
+          python -m pip install build wheel pytest pytest-asyncio
+          python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ nexus-extensibility
 
       - name: Prepare
         run: |
@@ -51,15 +51,22 @@ jobs:
 
       - name: Build
         run: |
-         dotnet build -c Release /p:Version=${{ env.VERSION }} /p:GeneratePackage=true src/Nexus.Sources.Remote/Nexus.Sources.Remote.csproj
-         python -m build --wheel --outdir artifacts/packages --no-isolation src/remoting/python-remoting
+          dotnet publish -c Release -o publish /p:Version=${{ env.VERSION }} /p:GeneratePackage=true src/Nexus.Sources.Remote/Nexus.Sources.Remote.csproj
+          python -m build --wheel --outdir artifacts/packages --no-isolation src/remoting/python-remoting
 
       - name: Test
         run: |
-         dotnet test -c Release /p:BuildProjectReferences=false --filter TestCategory=local
-         pyright
-         pytest
-         sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerPythonTests.sh
+          dotnet test -c Release /p:BuildProjectReferences=false --filter TestCategory=local
+          pyright
+          pytest
+          sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerPythonTests.sh
+
+      - name: Pack Publish Artifacts
+        run: |
+          mkdir artifacts/publish
+          cd publish
+          tar -zcvf ../artifacts/publish/assets.tar.gz *
+          cd -
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
@@ -67,6 +74,7 @@ jobs:
           name: artifacts
           path: |
             artifacts/packages/
+            artifacts/publish/
 
     outputs:
       is_release: ${{ env.IS_RELEASE }}
@@ -86,13 +94,13 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: artifacts
-          path: artifacts/packages
+          path: artifacts
 
       # GitHub Package Registry is broken by design: https://github.community/t/download-from-github-package-registry-without-authentication/14407/138
-      #- name: Nuget package (MyGet)
-      #  run: dotnet nuget push 'artifacts/packages/*.nupkg' --api-key ${MYGET_API_KEY} --source https://www.myget.org/F/apollo3zehn-dev/api/v3/index.json
-      #  env:
-      #    MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
+      - name: Nuget package (MyGet)
+        run: dotnet nuget push 'artifacts/packages/*.nupkg' --api-key ${MYGET_API_KEY} --source https://www.myget.org/F/apollo3zehn-dev/api/v3/index.json
+        env:
+          MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
 
       # GitHub Package Registry does not support Python packages: https://github.community/t/pypi-compatible-github-package-registry/14615
       - name: Python package (MyGet)
@@ -114,12 +122,16 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: artifacts
-          path: artifacts/packages
+          path: artifacts
+
+      - name: Annotation Tag
+        run: python build/create_tag_body.py
 
       - name: GitHub Release Artifacts
         uses: softprops/action-gh-release@v1
         with:
           body_path: tag_body.txt
+          files: artifacts/publish/assets.tar.gz
 
       - name: Nuget package (Nuget)
         run: dotnet nuget push 'artifacts/packages/*.nupkg' --api-key ${NUGET_API_KEY} --source https://api.nuget.org/v3/index.json
