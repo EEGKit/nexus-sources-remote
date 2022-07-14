@@ -29,7 +29,7 @@ public static class Program
         }
         catch (Exception ex)
         {
-            throw new Exception($"The second command line argument must be a valid port number. Inner error: {ex.ToString()}");
+            throw new Exception("The second command line argument must be a valid port number.", ex);
         }
 
         var communicator = new RemoteCommunicator(new CsDataSource(), address, port);
