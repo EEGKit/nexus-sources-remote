@@ -57,7 +57,7 @@ namespace Nexus.Sources.Tests
         private DataSourceContext CreateContext(string satelliteId, string command)
         {
             return new DataSourceContext(
-                ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+                ResourceLocator: new Uri("https://example.com")),
                 SystemConfiguration: new JsonObject()
                 {
                     ["remote-templates"] = new JsonObject()
