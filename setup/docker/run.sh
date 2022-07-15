@@ -18,7 +18,7 @@ echo "The git-url is: ${green}$1${white}"
 
 # derive user id
 user_id=$(echo -n $1 | openssl dgst -binary -md5 | openssl base64)
-user_id=${user_id//\//_}
+user_id=${user_id//[\/=]/_}
 echo "Derived user id: ${green}$user_id${white}"
 
 (
