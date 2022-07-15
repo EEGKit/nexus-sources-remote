@@ -6,7 +6,7 @@ white=$'\e[0m'
 echo "${green}Welcome to the dotnet satellite.sh script!${white}"
 project=$2
 
-if [ -f "../commit_changed" || ! -f "../build_successful" ]; then
+if [[ -f "../commit_changed" || ! -f "../build_successful" ]]; then
 
     echo "Build project ${green}${project}${white}"
     dotnet build -c Release ${project}
