@@ -88,12 +88,19 @@ namespace Nexus.Sources
                 _process = new Process() { StartInfo = psi };
                 _process.Start();
 
+                _process.OutputDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(e.Data))
+                        _logger.LogDebug(e.Data);
+                };
+
                 _process.ErrorDataReceived += (sender, e) =>
                 {
                     if (!string.IsNullOrWhiteSpace(e.Data))
                         _logger.LogWarning(e.Data);
                 };
 
+                _process.BeginOutputReadLine();
                 _process.BeginErrorReadLine();
 
                 // wait for clients to connect
