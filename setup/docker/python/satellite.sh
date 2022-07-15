@@ -2,7 +2,7 @@ green=$'\e[0;32m'
 orange=$'\e[0;33m'
 white=$'\e[0m'
 
-echo "${green}Welcome to the satellite.sh script!${white}"
+echo "${green}Welcome to the python satellite.sh script!${white}"
 
 # virtual environment
 env="~/venv"
