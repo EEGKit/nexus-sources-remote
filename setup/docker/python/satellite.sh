@@ -29,5 +29,5 @@ fi
 
 # run user code
 shift
-echo "Run command${green}python $@${white}"
+echo "Run command ${green}python $@${white}"
 python $@
