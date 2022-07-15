@@ -13,5 +13,5 @@ fi
 # run user code
 shift
 shift
-echo "Run command ${green}dotnet run --no-build --project ${project} -- $@${white}"
+echo "Run command ${green}dotnet run -c Release --no-build --project ${project} -- $@${white}"
 dotnet run -c Release --no-build --project ${project} -- $@
