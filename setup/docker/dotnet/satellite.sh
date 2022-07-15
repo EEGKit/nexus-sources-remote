@@ -7,11 +7,11 @@ project=$2
 
 if [ -f "../commit_changed" ]; then
     echo "Build project ${green}${project}${white}"
-    dotnet build ${project}
+    dotnet build -c Release ${project}
 fi
 
 # run user code
 shift
 shift
 echo "Run command ${green}dotnet run --no-build --project ${project} -- $@${white}"
-dotnet run --no-build --project ${project} -- $@
+dotnet run -c Release --no-build --project ${project} -- $@
