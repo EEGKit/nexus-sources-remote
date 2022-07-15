@@ -6,12 +6,13 @@
 
 ```sh
 sudo bash setup-host.sh python
-sudo docker-compose --env-file python/.env up -d
+sudo bash setup-host.sh dotnet
+sudo docker-compose up -d
 ```
 
 3. Wait a few seconds until the containers are running, then test the connection between both containers:
 
 ```sh
 sudo docker exec nexus-main \
-    bash -c "cd /root/nexus-sources-remote; dotnet test --filter Nexus.Sources.Tests.SetupDockerPythonTests"
+    bash -c "cd /root/nexus-sources-remote; dotnet test --filter Nexus.Sources.Tests.SetupDockerTests"
 ```

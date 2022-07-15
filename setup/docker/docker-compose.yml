@@ -10,10 +10,18 @@ services:
     entrypoint: bash -c "cd; curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/setup-main.sh'; source 'setup-main.sh'"
     restart: always
 
-  satellite:
-    container_name: nexus-${satellite_id}
-    image: ${satellite_image}
+  satellite-python:
+    container_name: nexus-python
+    image: python:3.9.0
     volumes:
-      - /var/lib/nexus/docker/nexus-${satellite_id}/.ssh:/root/.ssh
-    entrypoint: bash -c "satellite_id=${satellite_id};cd; curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/setup-satellite.sh'; source 'setup-satellite.sh'"
+      - /var/lib/nexus/docker/nexus-python/.ssh:/root/.ssh
+    entrypoint: bash -c "satellite_id=python;cd; curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/setup-satellite.sh'; source 'setup-satellite.sh'"
+    restart: always
+
+  satellite-nexus:
+    container_name: nexus-dotnet
+    image: mcr.microsoft.com/dotnet/sdk:6.0
+    volumes:
+      - /var/lib/nexus/docker/nexus-dotnet/.ssh:/root/.ssh
+    entrypoint: bash -c "satellite_id=dotnet;cd; curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/setup-satellite.sh'; source 'setup-satellite.sh'"
     restart: always
