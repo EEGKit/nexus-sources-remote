@@ -12,8 +12,8 @@ namespace Nexus.Sources.Tests
     {
 #if LINUX
         [Theory]
-        // [InlineData("python", "python/main.py nexus-main {remote-port}")]
-        [InlineData("dotnet", "dotnet/nexus-remoting-sample.csproj nexus-main {remote-port}")]
+        [InlineData("python", "python/main.py nexus-main {remote-port}")]
+        // [InlineData("dotnet", "dotnet/nexus-remoting-sample.csproj nexus-main {remote-port}")]
 #endif
         public async Task CanReadFullDay(string satelliteId, string command)
         {
