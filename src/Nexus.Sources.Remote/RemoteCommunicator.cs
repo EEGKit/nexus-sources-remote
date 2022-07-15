@@ -83,6 +83,7 @@ namespace Nexus.Sources
                     psi.EnvironmentVariables[variable.Key] = variable.Value;
                 }
 
+                psi.RedirectStandardOutput = true;
                 psi.RedirectStandardError = true;
 
                 _process = new Process() { StartInfo = psi };
