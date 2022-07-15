@@ -10,7 +10,7 @@ apt install openssh-server -y
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/g' '/etc/ssh/sshd_config'
 service ssh start
 
-echo "${green}Load run-${satellite_id}.sh and run-user.sh scripts${white}"
+echo "${green}Load run.sh, run-user.sh and ${satellite_id}/satellite.sh scripts${white}"
 curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/run.sh'
 curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/run-user.sh'
 curl -s -O "https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/${satellite_id}/satellite.sh"
