@@ -12,9 +12,8 @@ fi
 cd 'repository'
 
 (
-    commit_old=$(git show --format="%H" --no-patch)
-
     if [ -d '.git' ]; then
+        commit_old=$(git show --format="%H" --no-patch)
         echo "${green}Pull changes${white}"
         git fetch origin "main"
         git reset --hard "origin/main"
