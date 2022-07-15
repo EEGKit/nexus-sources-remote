@@ -31,6 +31,6 @@ cd 'repository'
     else
         rm --force "../commit_changed"
     fi
-) 100>"/tmp/run-user-${user_id}.lock"
+) 100>"/tmp/run-user-$(whoami).lock"
 
 source "../satellite.sh"
