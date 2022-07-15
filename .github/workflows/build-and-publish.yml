@@ -64,7 +64,7 @@ jobs:
           dotnet test -c Release /p:BuildProjectReferences=false --filter TestCategory=local
           pyright
           pytest
-          sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerPythonTests.sh
+          sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerTests.sh
 
       - name: Pack Publish Artifacts
         run: |

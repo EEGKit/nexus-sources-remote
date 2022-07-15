@@ -32,12 +32,12 @@ public static class Program
             throw new Exception("The second command line argument must be a valid port number.", ex);
         }
 
-        var communicator = new RemoteCommunicator(new CsDataSource(), address, port);
+        var communicator = new RemoteCommunicator(new DotnetDataSource(), address, port);
         await communicator.RunAsync();
     }
 }
 
-public class CsDataSource : IDataSource
+public class DotnetDataSource : IDataSource
 {
     private DataSourceContext _context = default!;
 
@@ -108,7 +108,7 @@ public class CsDataSource : IDataSource
         }
 
         else
-            throw new Exception("Unknown catalog ID.");
+            throw new Exception("Unknown catalog identifier.");
         
         return Task.FromResult(catalog);
     }
@@ -116,7 +116,7 @@ public class CsDataSource : IDataSource
     public Task<(DateTime Begin, DateTime End)> GetTimeRangeAsync(string catalogId, CancellationToken cancellationToken)
     {
         if (catalogId != "/A/B/C")
-            throw new Exception("Unknown catalog ID.");
+            throw new Exception("Unknown catalog identifier.");
 
         var filePaths = Directory.GetFiles(_context.ResourceLocator.ToPath(), "*.dat", SearchOption.AllDirectories);
         var fileNames = filePaths.Select(filePath => Path.GetFileName(filePath));
@@ -132,13 +132,12 @@ public class CsDataSource : IDataSource
             .ToList();
 
         return Task.FromResult((dateTimes[0], dateTimes[^1]));
-
     }
 
     public Task<double> GetAvailabilityAsync(string catalogId, DateTime begin, DateTime end, CancellationToken cancellationToken)
     {
         if (catalogId != "/A/B/C")
-            throw new Exception("Unknown catalog ID.");
+            throw new Exception("Unknown catalog identifier.");
 
         var periodPerFile = TimeSpan.FromMinutes(10);
         var maxFileCount = (end - begin).Ticks / periodPerFile.Ticks;

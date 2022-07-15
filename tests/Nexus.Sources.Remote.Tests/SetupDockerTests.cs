@@ -11,13 +11,14 @@ namespace Nexus.Sources.Tests
     public class SetupDockerPythonTests
     {
 #if LINUX
-        [Fact]
+        [Theory]
+        [InlineData("python/main.py nexus-main {remote-port}")]
+        [InlineData("dotnet/nexus-remoting-sample.csproj nexus-main {remote-port}")]
 #endif
-        public async Task CanReadFullDay()
+        public async Task CanReadFullDay(string satelliteId, string command)
         {
             var dataSource = new Remote() as IDataSource;
-            var command = "main.py nexus-main {remote-port}";
-            var context = CreateContext(command);
+            var context = CreateContext(satelliteId, command);
 
             await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -53,7 +54,7 @@ namespace Nexus.Sources.Tests
             Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
         }
 
-        private DataSourceContext CreateContext(string command)
+        private DataSourceContext CreateContext(string satelliteId, string command)
         {
             return new DataSourceContext(
                 ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
@@ -61,7 +62,7 @@ namespace Nexus.Sources.Tests
                 {
                     ["remote-templates"] = new JsonObject()
                     {
-                        ["docker"] = "ssh root@nexus-python bash run.sh {git-url} {command}",
+                        ["docker"] = $"ssh root@nexus-{satelliteId} bash run.sh {{git-url}} {{command}}",
                     }
                 }.Deserialize<JsonElement>(),
                 SourceConfiguration: new JsonObject()

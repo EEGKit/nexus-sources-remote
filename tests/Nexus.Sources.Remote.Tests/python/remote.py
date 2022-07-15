@@ -75,14 +75,14 @@ class PythonDataSource(IDataSource):
                 .build()
 
         else:
-            raise Exception("Unknown catalog ID.")
+            raise Exception("Unknown catalog identifier.")
 
         return catalog
 
     async def get_time_range(self, catalog_id: str):
 
         if catalog_id != "/A/B/C":
-            raise Exception("Unknown catalog ID.")
+            raise Exception("Unknown catalog identifier.")
 
         file_paths = glob.glob(url2pathname(self._context.resource_locator.path) + "/**/*.dat", recursive=True)
         file_names = [os.path.basename(file_path) for file_path in file_paths]
@@ -95,7 +95,7 @@ class PythonDataSource(IDataSource):
     async def get_availability(self, catalog_id: str, begin: datetime, end: datetime):
 
         if catalog_id != "/A/B/C":
-            raise Exception("Unknown catalog ID.")
+            raise Exception("Unknown catalog identifier.")
 
         period_per_file = timedelta(minutes = 10)
         max_file_count = (end - begin).total_seconds() / period_per_file.total_seconds()
