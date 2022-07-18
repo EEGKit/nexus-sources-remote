@@ -11,8 +11,8 @@ namespace Nexus.Sources
 {
     [ExtensionDescription(
         "Provides access to remote databases",
-        "https://github.com/Nexusforge/nexus-sources-remote",
-        "https://github.com/Nexusforge/nexus-sources-remote")]
+        "https://github.com/malstroem-labs/nexus-sources-remote",
+        "https://github.com/malstroem-labs/nexus-sources-remote")]
     public class Remote : IDataSource, IDisposable
     {
         #region Fields

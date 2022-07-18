@@ -70,7 +70,7 @@ namespace Nexus.Sources.Tests
                     ["listen-address"] = "0.0.0.0",
                     ["template"] = "docker",
                     ["command"] = command,
-                    ["git-url"] = "https://github.com/Nexusforge/nexus-remoting-sample"
+                    ["git-url"] = "https://github.com/malstroem-labs/nexus-remoting-sample"
                 }.Deserialize<JsonElement>(),
                 RequestConfiguration: default
             );

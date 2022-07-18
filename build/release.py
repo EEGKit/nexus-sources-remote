@@ -18,7 +18,7 @@ print("  main branch: OK")
 
 # check if release version already exist
 access_token = sys.argv[1]
-request_url = f"https://api.github.com/repos/nexusforge/nexus-sources-remote/releases"
+request_url = f"https://api.github.com/repos/malstroem-labs/nexus-sources-remote/releases"
 
 headers = {
     "Authorization": f"token {access_token}",

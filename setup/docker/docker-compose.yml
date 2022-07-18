@@ -7,7 +7,7 @@ services:
     image: mcr.microsoft.com/dotnet/sdk:6.0
     volumes:
       - /var/lib/nexus/docker/nexus-main/.ssh:/root/.ssh
-    entrypoint: bash -c "cd; curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/setup-main.sh'; source 'setup-main.sh'"
+    entrypoint: bash -c "cd; curl -s -O 'https://raw.githubusercontent.com/malstroem-labs/nexus-sources-remote/main/setup/docker/setup-main.sh'; source 'setup-main.sh'"
     restart: always
 
   satellite-python:
@@ -15,7 +15,7 @@ services:
     image: python:3.9.0
     volumes:
       - /var/lib/nexus/docker/nexus-python/.ssh:/root/.ssh
-    entrypoint: bash -c "satellite_id=python;cd; curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/setup-satellite.sh'; source 'setup-satellite.sh'"
+    entrypoint: bash -c "satellite_id=python;cd; curl -s -O 'https://raw.githubusercontent.com/malstroem-labs/nexus-sources-remote/main/setup/docker/setup-satellite.sh'; source 'setup-satellite.sh'"
     restart: always
 
   satellite-nexus:
@@ -23,5 +23,5 @@ services:
     image: mcr.microsoft.com/dotnet/sdk:6.0
     volumes:
       - /var/lib/nexus/docker/nexus-dotnet/.ssh:/root/.ssh
-    entrypoint: bash -c "satellite_id=dotnet;cd; curl -s -O 'https://raw.githubusercontent.com/Nexusforge/nexus-sources-remote/main/setup/docker/setup-satellite.sh'; source 'setup-satellite.sh'"
+    entrypoint: bash -c "satellite_id=dotnet;cd; curl -s -O 'https://raw.githubusercontent.com/malstroem-labs/nexus-sources-remote/main/setup/docker/setup-satellite.sh'; source 'setup-satellite.sh'"
     restart: always
