@@ -12,8 +12,8 @@ namespace Nexus.Sources.Tests
     {
 #if LINUX
         [Theory]
-        [InlineData("python", "python/main.py nexus-main {remote-port}")]
-        [InlineData("dotnet", "dotnet/nexus-remoting-sample.csproj nexus-main {remote-port}")]
+        [InlineData("python", "main.py nexus-main {remote-port}")]
+        [InlineData("dotnet", "nexus-remoting-sample.csproj nexus-main {remote-port}")]
 #endif
         public async Task CanReadFullDay(string satelliteId, string command)
         {
@@ -70,7 +70,7 @@ namespace Nexus.Sources.Tests
                     ["listen-address"] = "0.0.0.0",
                     ["template"] = "docker",
                     ["command"] = command,
-                    ["git-url"] = "https://github.com/malstroem-labs/nexus-remoting-sample"
+                    ["git-url"] = $"https://github.com/malstroem-labs/nexus-remoting-template-{satelliteId}"
                 }.Deserialize<JsonElement>(),
                 RequestConfiguration: default
             );

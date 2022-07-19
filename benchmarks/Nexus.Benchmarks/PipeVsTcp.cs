@@ -11,9 +11,9 @@ namespace Nexus.Benchmarks
     [MemoryDiagnoser]
     public class PipeVsTcp
     {
-        private Process _pipeProcess;
-        private Process _tcpProcess;
-        private TcpClient _tcpClient;
+        private Process _pipeProcess = default!;
+        private Process _tcpProcess = default!;
+        private TcpClient _tcpClient = default!;
 
         [GlobalSetup]
         public void GlobalSetup()

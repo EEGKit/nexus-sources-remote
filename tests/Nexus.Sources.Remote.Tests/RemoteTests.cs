@@ -14,8 +14,8 @@ namespace Nexus.Sources.Tests
     public class RemoteTests
     {
         [Theory]
-        [InlineData("dotnet run --project dotnet/remote.csproj localhost {remote-port}")]
-        [InlineData("python python/remote.py localhost {remote-port}")]
+        [InlineData("dotnet run --project remote.csproj localhost {remote-port}")]
+        [InlineData("python remote.py localhost {remote-port}")]
 #if LINUX
         [InlineData("bash/remote.sh localhost {remote-port}")]
 #endif
@@ -75,8 +75,8 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("dotnet run --project dotnet/remote.csproj localhost {remote-port}")]
-        [InlineData("python python/remote.py localhost {remote-port}")]
+        [InlineData("dotnet run --project remote.csproj localhost {remote-port}")]
+        [InlineData("python remote.py localhost {remote-port}")]
 #if LINUX
         [InlineData("bash/remote.sh localhost {remote-port}")]
 #endif
@@ -97,8 +97,8 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("dotnet run --project dotnet/remote.csproj localhost {remote-port}")]
-        [InlineData("python python/remote.py localhost {remote-port}")]
+        [InlineData("dotnet run --project remote.csproj localhost {remote-port}")]
+        [InlineData("python remote.py localhost {remote-port}")]
 #if LINUX
         [InlineData("bash/remote.sh localhost {remote-port}")]
 #endif
@@ -117,8 +117,8 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("dotnet run --project dotnet/remote.csproj localhost {remote-port}", true)]
-        [InlineData("python python/remote.py localhost {remote-port}", true)]
+        [InlineData("dotnet run --project remote.csproj localhost {remote-port}", true)]
+        [InlineData("python remote.py localhost {remote-port}", true)]
 #if LINUX
         [InlineData("bash/remote.sh localhost {remote-port}", false)]
 #endif
@@ -181,8 +181,8 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("dotnet run --project dotnet/remote.csproj localhost {remote-port}")]
-        [InlineData("python python/remote.py localhost {remote-port}")]
+        [InlineData("dotnet run --project remote.csproj localhost {remote-port}")]
+        [InlineData("python remote.py localhost {remote-port}")]
 #if LINUX
         [InlineData("bash/remote.sh localhost {remote-port}")]
 #endif
@@ -207,8 +207,8 @@ namespace Nexus.Sources.Tests
         }
 
         [Theory]
-        [InlineData("dotnet run --project dotnet/remote.csproj localhost {remote-port}")]
-        [InlineData("python python/remote.py localhost {remote-port}")]
+        [InlineData("dotnet run --project remote.csproj localhost {remote-port}")]
+        [InlineData("python remote.py localhost {remote-port}")]
         public async Task CanReadDataHandler(string command)
         {
             var dataSource = new Remote() as IDataSource;
