@@ -124,7 +124,6 @@ namespace Nexus.Sources.Tests
 
             if (complexData)
             {
-
                 void GenerateData(DateTimeOffset dateTime)
                 {
                     var data = Enumerable.Range(0, 600)

@@ -41,13 +41,25 @@ namespace Nexus.Sources.Tests
 
             for (int i = 0; i < length; i++)
             {
-                expectedData[i] = i;
+                expectedData[i] = i * 2;
             }
 
             expectedStatus.AsSpan().Fill(1);
 
+            Task<ReadOnlyMemory<double>> ReadData(string resourcePath, DateTime begin, DateTime end, CancellationToken cancellationToken)
+            {
+                var buffer = new double[length];
+
+                for (int i = 0; i < length; i++)
+                {
+                    buffer[i] = i;
+                }
+
+                return Task.FromResult(new ReadOnlyMemory<double>(buffer));
+            }
+
             var request = new ReadRequest(catalogItem, data, status);
-            await dataSource.ReadAsync(begin, end, new ReadRequest[] { request }, default!, new Progress<double>(), CancellationToken.None);
+            await dataSource.ReadAsync(begin, end, new ReadRequest[] { request }, ReadData, new Progress<double>(), CancellationToken.None);
             var doubleData = new CastMemoryManager<byte, double>(data).Memory;
 
             Assert.True(expectedData.SequenceEqual(doubleData.ToArray()));
