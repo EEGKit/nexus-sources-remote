@@ -10,15 +10,15 @@ import version
 final_version = f"v{version.get_version(build=None)}"
 print(f"release version: {final_version}")
 
-# check if on main branch
-if not "* main" in subprocess.check_output(["git", "branch"], stdin=None, stderr=None, shell=False).decode("utf8"):
-    raise Exception("Must be on main branch.")
+# check if on master branch
+if not "* master" in subprocess.check_output(["git", "branch"], stdin=None, stderr=None, shell=False).decode("utf8"):
+    raise Exception("Must be on master branch.")
 
-print("  main branch: OK")
+print("  master branch: OK")
 
 # check if release version already exist
 access_token = sys.argv[1]
-request_url = f"https://api.github.com/repos/malstroem-labs/nexus-sources-remote/releases"
+request_url = f"https://api.github.com/repos/nexuforge/nexus/releases"
 
 headers = {
     "Authorization": f"token {access_token}",

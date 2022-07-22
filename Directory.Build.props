@@ -1,13 +1,11 @@
 <Project>
 
   <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <TargetFrameworkVersion>net6.0</TargetFrameworkVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-
-    <RestoreAdditionalProjectSources>
-		  https://www.myget.org/F/apollo3zehn-dev/api/v3/index.json
-    </RestoreAdditionalProjectSources>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
       
   <PropertyGroup>
