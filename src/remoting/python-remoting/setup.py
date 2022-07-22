@@ -24,7 +24,7 @@ setuptools.setup(
     description="This package contains types to easily implement a Nexus.Sources.Remote client for the Nexus software (a GUI for time-series data lakes).",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author=cast(str, os.getenv("AUTHORS")),
+    author=str(os.getenv("AUTHORS")),
     url="https://github.com/malstroem-labs/nexus-sources-remote",
     packages=[
         "nexus_remoting"
@@ -38,7 +38,7 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent"
     ],
-    license=cast(str, os.getenv("PACKAGELICENSEEXPRESSION")),
+    license=str(os.getenv("PACKAGELICENSEEXPRESSION")),
     keywords="Nexus time-series data lake remoting",
     platforms=[
         "any"
