@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Nexus.Extensibility" Version="1.0.0-beta.11.160">
+    <PackageReference Include="Nexus.Extensibility" Version="1.0.0-beta.11.167">
       <ExcludeAssets>runtime;native</ExcludeAssets>
     </PackageReference>
 	  
