@@ -248,7 +248,7 @@ namespace Nexus.Sources
         private async Task<(string Identifier, TcpClient Client)> GetTcpClientAsync(string[] filters, CancellationToken cancellationToken)
         {
             var buffer = new byte[4];
-            var client = await _tcpListener.AcceptTcpClientAsync();
+            var client = await _tcpListener.AcceptTcpClientAsync(cancellationToken);
 
             await InternalReadRawAsync(buffer, client.GetStream(), cancellationToken);
 
