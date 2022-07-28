@@ -3,6 +3,9 @@
   <PropertyGroup>
     <AssemblyName>Nexus.Remoting</AssemblyName>
     <TargetFramework>$(TargetFrameworkVersion)</TargetFramework>
+    <RestoreAdditionalProjectSources>
+      https://www.myget.org/F/apollo3zehn-dev/api/v3/index.json
+    </RestoreAdditionalProjectSources>
   </PropertyGroup>
 	
   <PropertyGroup>
