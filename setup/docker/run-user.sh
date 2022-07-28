@@ -15,8 +15,8 @@ cd 'repository'
     if [ -d '.git' ]; then
         commit_old=$(git show --format="%H" --no-patch)
         echo "${green}Pull changes${white}"
-        git fetch origin "main"
-        git reset --hard "origin/main"
+        git fetch origin "master"
+        git reset --hard "origin/master"
     else
         echo "Clone repository ${orange}$1${white}"
         git clone $1 .

@@ -17,7 +17,7 @@ namespace Nexus.Sources.Tests
         [InlineData("dotnet run --project dotnet/remote.csproj localhost {remote-port}")]
         [InlineData("python python/remote.py localhost {remote-port}")]
 #if LINUX
-        [InlineData("bash/remote.sh localhost {remote-port}")]
+        [InlineData("bash bash/remote.sh localhost {remote-port}")]
 #endif
         public async Task ProvidesCatalog(string command)
         {
@@ -54,7 +54,7 @@ namespace Nexus.Sources.Tests
         [InlineData("dotnet run --project dotnet/remote.csproj localhost {remote-port}")]
         [InlineData("python python/remote.py localhost {remote-port}")]
 #if LINUX
-        [InlineData("bash/remote.sh localhost {remote-port}")]
+        [InlineData("bash bash/remote.sh localhost {remote-port}")]
 #endif
         public async Task CanProvideTimeRange(string command)
         {
@@ -76,7 +76,7 @@ namespace Nexus.Sources.Tests
         [InlineData("dotnet run --project dotnet/remote.csproj localhost {remote-port}")]
         [InlineData("python python/remote.py localhost {remote-port}")]
 #if LINUX
-        [InlineData("bash/remote.sh localhost {remote-port}")]
+        [InlineData("bash bash/remote.sh localhost {remote-port}")]
 #endif
         public async Task CanProvideAvailability(string command)
         {
@@ -96,7 +96,7 @@ namespace Nexus.Sources.Tests
         [InlineData("dotnet run --project dotnet/remote.csproj localhost {remote-port}", true)]
         [InlineData("python python/remote.py localhost {remote-port}", true)]
 #if LINUX
-        [InlineData("bash/remote.sh localhost {remote-port}", false)]
+        [InlineData("bash bash/remote.sh localhost {remote-port}", false)]
 #endif
         public async Task CanReadFullDay(string command, bool complexData)
         {
@@ -159,7 +159,7 @@ namespace Nexus.Sources.Tests
         [InlineData("dotnet run --project dotnet/remote.csproj localhost {remote-port}")]
         [InlineData("python python/remote.py localhost {remote-port}")]
 #if LINUX
-        [InlineData("bash/remote.sh localhost {remote-port}")]
+        [InlineData("bash bash/remote.sh localhost {remote-port}")]
 #endif
         public async Task CanLog(string command)
         {

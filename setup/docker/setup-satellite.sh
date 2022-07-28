@@ -11,9 +11,9 @@ sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/g' '/etc/ssh/ss
 service ssh start
 
 echo "${green}Load run.sh, run-user.sh and ${satellite_id}/satellite.sh scripts${white}"
-curl -s -O 'https://raw.githubusercontent.com/malstroem-labs/nexus-sources-remote/main/setup/docker/run.sh'
-curl -s -O 'https://raw.githubusercontent.com/malstroem-labs/nexus-sources-remote/main/setup/docker/run-user.sh'
-curl -s -O "https://raw.githubusercontent.com/malstroem-labs/nexus-sources-remote/main/setup/docker/${satellite_id}/satellite.sh"
+curl -s -O 'https://raw.githubusercontent.com/malstroem-labs/nexus-sources-remote/master/setup/docker/run.sh'
+curl -s -O 'https://raw.githubusercontent.com/malstroem-labs/nexus-sources-remote/master/setup/docker/run-user.sh'
+curl -s -O "https://raw.githubusercontent.com/malstroem-labs/nexus-sources-remote/master/setup/docker/${satellite_id}/satellite.sh"
 
 mkdir -p /var/lib/nexus
 touch "/var/lib/nexus/ready"
