@@ -78,7 +78,7 @@ jobs:
         with:
           name: artifacts
           path: |
-            artifacts/*.txt
+            artifacts/tag_body.txt
             artifacts/packages/
             artifacts/publish/
 
