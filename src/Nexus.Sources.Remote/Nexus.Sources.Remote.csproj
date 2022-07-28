@@ -3,9 +3,6 @@
   <PropertyGroup>
     <TargetFramework>$(TargetFrameworkVersion)</TargetFramework>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <RestoreAdditionalProjectSources>
-      https://www.myget.org/F/apollo3zehn-dev/api/v3/index.json
-    </RestoreAdditionalProjectSources>
   </PropertyGroup>
 
   <ItemGroup>
