@@ -148,7 +148,8 @@ class RemoteCommunicator:
         elif method_name == "setContext":
 
             raw_context = params[0]
-            resource_locator = urlparse(cast(str, raw_context["resourceLocator"]))
+            resource_locator_string = cast(str, raw_context["resourceLocator"])
+            resource_locator = None if resource_locator_string is None else urlparse(resource_locator_string)
 
             system_configuration = raw_context["systemConfiguration"] \
                 if "systemConfiguration" in raw_context else None

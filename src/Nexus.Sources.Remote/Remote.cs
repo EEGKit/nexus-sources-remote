@@ -225,17 +225,8 @@ namespace Nexus.Sources
 
         private string BuildCommand(string templateId)
         {
-            var template = default(string);
-
-            if (Context.SystemConfiguration is not null &&
-                Context.SystemConfiguration.Value.ValueKind == JsonValueKind.Object &&
-                Context.SystemConfiguration.Value.TryGetProperty("remote-templates", out var templatesProperty) &&
-                templatesProperty.ValueKind == JsonValueKind.Object &&
-                templatesProperty.TryGetProperty(templateId, out var templateProperty) &&
-                templateProperty.ValueKind == JsonValueKind.String)
-            {
-                template = templateProperty.GetString();
-            }
+            var template = Context.SystemConfiguration
+                .GetStringValue($"{typeof(Remote).FullName}/templates/{templateId}");
 
             if (template is null)
                 throw new Exception($"The template {templateId} does not exist.");

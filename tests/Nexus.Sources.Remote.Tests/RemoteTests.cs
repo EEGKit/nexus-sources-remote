@@ -240,9 +240,12 @@ namespace Nexus.Sources.Tests
                 ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
                 SystemConfiguration: new JsonObject()
                 {
-                    ["remote-templates"] = new JsonObject()
+                    [typeof(Remote).FullName!] = new JsonObject()
                     {
-                        ["local"] = "{command}",
+                        ["templates"] = new JsonObject()
+                        {
+                            ["local"] = "{command}",
+                        }
                     }
                 }.Deserialize<JsonElement>(),
                 SourceConfiguration: new JsonObject()

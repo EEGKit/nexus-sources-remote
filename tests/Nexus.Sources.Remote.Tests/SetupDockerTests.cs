@@ -72,9 +72,12 @@ namespace Nexus.Sources.Tests
                 ResourceLocator: new Uri("https://example.com"),
                 SystemConfiguration: new JsonObject()
                 {
-                    ["remote-templates"] = new JsonObject()
+                    [typeof(Remote).FullName!] = new JsonObject()
                     {
-                        ["docker"] = $"ssh root@nexus-{satelliteId} bash run.sh {{git-url}} {{command}}",
+                        ["templates"] = new JsonObject()
+                        {
+                            ["docker"] = $"ssh root@nexus-{satelliteId} bash run.sh {{git-url}} {{command}}",
+                        }
                     }
                 }.Deserialize<JsonElement>(),
                 SourceConfiguration: new JsonObject()
