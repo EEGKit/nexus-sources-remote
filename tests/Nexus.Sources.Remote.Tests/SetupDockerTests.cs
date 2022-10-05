@@ -76,7 +76,7 @@ namespace Nexus.Sources.Tests
                     {
                         ["templates"] = new JsonObject()
                         {
-                            ["docker"] = $"ssh root@nexus-{satelliteId} bash run.sh {{git-url}} {{command}}",
+                            ["docker"] = $"ssh root@nexus-{satelliteId} bash run.sh {{git-url}} {{git-tag}} {{command}}",
                         }
                     }
                 }.Deserialize<JsonElement>(),
@@ -85,7 +85,8 @@ namespace Nexus.Sources.Tests
                     ["listen-address"] = "0.0.0.0",
                     ["template"] = "docker",
                     ["command"] = command,
-                    ["git-url"] = $"https://github.com/malstroem-labs/nexus-remoting-template-{satelliteId}"
+                    ["git-url"] = $"https://github.com/malstroem-labs/nexus-remoting-template-{satelliteId}",
+                    ["git-tag"] = "v1.0.0"
                 }.Deserialize<JsonElement>(),
                 RequestConfiguration: default
             );

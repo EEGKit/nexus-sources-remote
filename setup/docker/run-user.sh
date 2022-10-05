@@ -12,23 +12,26 @@ fi
 cd 'repository'
 
 (
+    clone_required=false
+
     if [ -d '.git' ]; then
-        commit_old=$(git show --format="%H" --no-patch)
-        echo "${green}Pull changes${white}"
-        git fetch origin "master"
-        git reset --hard "origin/master"
+        current_tag=$(git describe --tags)
+        echo "Current tag is ${green}${current_tag}${white}"
+
+        if [ "$current_tag" != "$2" ]; then
+            rm -f -r .* *
+            clone_required=true
+        fi
     else
-        echo "Clone repository ${orange}$1${white}"
-        git clone $1 .
+        clone_required=true
     fi
 
-    commit_new=$(git show --format="%H" --no-patch)
-    echo "Current commit is ${green}${commit_new}${white}"
-
-    if [[ "$commit_new" != "$commit_old" ]]; then
-        touch "../commit_changed"
+    if [[ "$clone_required" = true ]]; then
+        echo "Clone repository ${orange}$1${white} @ ${orange}$2${white}"
+        git clone --depth 1 --branch $2 $1 .
+        touch "../tag_changed"
     else
-        rm --force "../commit_changed"
+        rm --force "../tag_changed"
     fi
 ) 100>"/tmp/run-user-$(whoami).lock"
 

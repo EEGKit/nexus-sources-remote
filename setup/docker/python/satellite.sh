@@ -18,7 +18,7 @@ source $env/bin/activate
 # requirements
 if [ -f "requirements.txt" ]; then
 
-    if [ -f "../commit_changed" ]; then
+    if [ -f "../tag_changed" ]; then
         echo "${green}Install requirements${white}"
         python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ -r "requirements.txt" --disable-pip-version-check
     fi
@@ -28,6 +28,7 @@ else
 fi
 
 # run user code
+shift
 shift
 echo "Run command ${green}python $@${white}"
 python $@

@@ -4,9 +4,9 @@ orange=$'\e[0;33m'
 white=$'\e[0m'
 
 echo "${green}Welcome to the dotnet satellite.sh script!${white}"
-project=$2
+project=$3
 
-if [[ -f "../commit_changed" || ! -f "../build_successful" ]]; then
+if [[ -f "../tag_changed" || ! -f "../build_successful" ]]; then
 
     echo "Build project ${green}${project}${white}"
     dotnet build -c Release ${project}
@@ -20,6 +20,7 @@ if [[ -f "../commit_changed" || ! -f "../build_successful" ]]; then
 fi
 
 # run user code
+shift
 shift
 shift
 echo "Run command ${green}dotnet run -c Release --no-build --project ${project} -- $@${white}"
