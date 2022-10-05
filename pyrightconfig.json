@@ -2,7 +2,7 @@
   "include": [
     "src/remoting/python-remoting",
     "tests/remoting/python-remoting-tests",
-    "tests/Nexus.Sources.Remote.Tests/Python"
+    "tests/Nexus.Sources.Remote.Tests/python"
   ],
   "stubPath": "",
   "executionEnvironments":[
