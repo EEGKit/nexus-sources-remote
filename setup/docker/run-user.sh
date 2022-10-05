@@ -28,7 +28,7 @@ cd 'repository'
 
     if [[ "$clone_required" = true ]]; then
         echo "Clone repository ${orange}$1${white} @ ${orange}$2${white}"
-        git clone --depth 1 --branch $2 $1 .
+        git clone -c advice.detachedHead=false --depth 1 --branch $2 $1 .
         touch "../tag_changed"
     else
         rm --force "../tag_changed"
