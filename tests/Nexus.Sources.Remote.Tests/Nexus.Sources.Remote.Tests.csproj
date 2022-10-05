@@ -24,7 +24,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
     <PackageReference Include="Moq" Version="4.16.1" />
-    <PackageReference Include="Nexus.Extensibility" Version="1.0.0-beta.11.198" />
+    <PackageReference Include="Nexus.Extensibility" Version="1.0.0-beta.11.217" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -37,29 +37,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="bash\remote.sh">
+    <None Update="bash/remote.sh">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="bash\catalog.json">
+    <None Update="bash/catalog.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="python\remote.py">
+    <None Update="python/remote.py">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="TESTDATA\2019-12\2019-12-31\2019-12-31_12-00-00.dat">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="TESTDATA\2019-12\2019-12-31\2019-12-31_12-20-00.dat">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="TESTDATA\2020-01\2020-01-01\2020-01-01_00-00-00.dat">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="TESTDATA\2020-01\2020-01-02\2020-01-02_09-40-00.dat">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="TESTDATA\2020-01\2020-01-02\2020-01-02_09-50-00.dat">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Update="*TESTDATA/**/*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
