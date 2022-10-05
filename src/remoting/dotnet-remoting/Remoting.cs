@@ -200,7 +200,10 @@ public class RemoteCommunicator
         else if (methodName == "setContext")
         {
             var rawContext = @params[0];
-            var resourceLocator = new Uri(rawContext.GetProperty("resourceLocator").GetString()!);
+            var resourceLocator = default(Uri?);
+
+            if (rawContext.TryGetProperty("resourceLocator", out var value))
+                resourceLocator = new Uri(value.GetString()!);
 
             var systemConfiguration = default(JsonElement);
             rawContext.TryGetProperty("systemConfiguration", out systemConfiguration);
