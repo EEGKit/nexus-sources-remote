@@ -281,7 +281,6 @@ namespace Nexus.Sources
                         _commStream?.Dispose();
                         _dataStream?.Dispose();
 
-
                         try
                         {
                             _process?.Kill();
