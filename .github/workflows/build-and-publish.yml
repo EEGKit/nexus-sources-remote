@@ -29,7 +29,7 @@ jobs:
       - name: Environment
         run: |
           echo "VERSION=$(python build/print_version.py ${{ github.run_number }} ${{ env.IS_RELEASE }} false)" >> $GITHUB_ENV
-          echo "PYPI_VERSION=$(python build/print_version.py  ${{ github.run_number }} ${{ env.IS_RELEASE }} true)" >> $GITHUB_ENV
+          echo "PYPI_VERSION=$(python build/print_version.py  ${{ github.run_number }} ${{ env.IS_RELEASE }} pypi)" >> $GITHUB_ENV
           echo "$(python build/print_solution.py)" >> $GITHUB_ENV
 
       - name: Extract annotation tag
