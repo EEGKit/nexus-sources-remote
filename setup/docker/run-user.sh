@@ -19,7 +19,7 @@ cd 'repository'
         echo "Current tag is ${green}${current_tag}${white}"
 
         if [ "$current_tag" != "$2" ]; then
-            rm -f -r .* *
+            rm --force -r .* * 2> /dev/null
             clone_required=true
         fi
     else
