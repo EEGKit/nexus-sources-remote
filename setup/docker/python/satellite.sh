@@ -4,8 +4,8 @@ white=$'\e[0m'
 
 echo "${green}Welcome to the python satellite.sh script!${white}"
 
-# virtual environment
-env="~/venv"
+# virtual environment (!!DO NOT QUOTE TO ALLOW TILDE EXPANSION!!)
+env=~/venv
 
 if [ ! -d $env ]; then 
     echo "Create virtual environment ${green}${env}${white}"
