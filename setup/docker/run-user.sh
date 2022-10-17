@@ -23,6 +23,7 @@ cd 'repository'
             clone_required=true
         fi
     else
+        rm --force -r .* * 2> /dev/null
         clone_required=true
     fi
 
