@@ -133,7 +133,7 @@ namespace Nexus.Sources
                         ContractResolver = new DefaultContractResolver
                         {
                             NamingStrategy = new CamelCaseNamingStrategy()
-                        },
+                        }
                     }
                 };
 
