@@ -33,8 +33,8 @@ namespace Nexus.Sources.Tests
             // assert
             var actualProperties1 = actual.Properties;
             var actualIds = actual.Resources!.Select(resource => resource.Id).ToList();
-            var actualUnits = actual.Resources!.Select(resource => resource.Properties.GetStringValue("unit")).ToList();
-            var actualGroups = actual.Resources!.SelectMany(resource => resource.Properties.GetStringArray("groups")!);
+            var actualUnits = actual.Resources!.Select(resource => resource.Properties?.GetStringValue("unit")).ToList();
+            var actualGroups = actual.Resources!.SelectMany(resource => resource.Properties?.GetStringArray("groups")!);
             var actualDataTypes = actual.Resources!.SelectMany(resource => resource.Representations!.Select(representation => representation.DataType)).ToList();
 
             var expectedProperties1 = new Dictionary<string, string>() { ["a"] = "b" };
@@ -112,7 +112,8 @@ namespace Nexus.Sources.Tests
             var catalogItem = new CatalogItem(
                 catalog with { Resources = default! }, 
                 resource with { Representations = default! }, 
-                representation);
+                representation,
+                default);
 
             var begin = new DateTime(2019, 12, 31, 0, 0, 0, DateTimeKind.Utc);
             var end = new DateTime(2020, 01, 03, 0, 0, 0, DateTimeKind.Utc);
@@ -198,7 +199,8 @@ namespace Nexus.Sources.Tests
             var catalogItem = new CatalogItem(
                 catalog with { Resources = default! },
                 resource with { Representations = default! },
-                representation);
+                representation,
+                default);
 
             var begin = new DateTime(2020, 01, 01, 0, 0, 0, DateTimeKind.Utc);
             var end = new DateTime(2020, 01, 01, 0, 1, 0, DateTimeKind.Utc);
@@ -238,27 +240,27 @@ namespace Nexus.Sources.Tests
         {
             return new DataSourceContext(
                 ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
-                SystemConfiguration: new JsonObject()
+                SystemConfiguration: new Dictionary<string, JsonElement>()
                 {
-                    [typeof(Remote).FullName!] = new JsonObject()
+                    [typeof(Remote).FullName!] = JsonSerializer.SerializeToElement(new JsonObject()
                     {
                         ["templates"] = new JsonObject()
                         {
                             ["local"] = "{command}",
                         }
-                    }
-                }.Deserialize<JsonElement>(),
-                SourceConfiguration: new JsonObject()
+                    })
+                },
+                SourceConfiguration: new Dictionary<string, JsonElement>()
                 {
-                    ["listen-address"] = "127.0.0.1",
-                    ["listen-port-min"] = "63000",
-                    ["template"] = "local",
-                    ["command"] = command,
-                    ["environment-variables"] = new JsonObject()
+                    ["listen-address"] = JsonSerializer.SerializeToElement("127.0.0.1"),
+                    ["listen-port-min"] = JsonSerializer.SerializeToElement("63000"),
+                    ["template"] = JsonSerializer.SerializeToElement("local"),
+                    ["command"] = JsonSerializer.SerializeToElement(command),
+                    ["environment-variables"] = JsonSerializer.SerializeToElement(new JsonObject()
                     {
                         ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}"
-                    }
-                }.Deserialize<JsonElement>(),
+                    })
+                },
                 RequestConfiguration: default
             );
         }

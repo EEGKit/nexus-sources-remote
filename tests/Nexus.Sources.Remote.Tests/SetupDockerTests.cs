@@ -29,7 +29,8 @@ namespace Nexus.Sources.Tests
             var catalogItem = new CatalogItem(
                 catalog with { Resources = default! }, 
                 resource with { Representations = default! }, 
-                representation);
+                representation,
+                default);
 
             var begin = new DateTime(2020, 01, 01, 0, 0, 0, DateTimeKind.Utc);
             var end = new DateTime(2020, 01, 01, 0, 0, 10, DateTimeKind.Utc);
@@ -70,24 +71,24 @@ namespace Nexus.Sources.Tests
         {
             return new DataSourceContext(
                 ResourceLocator: new Uri("https://example.com"),
-                SystemConfiguration: new JsonObject()
+                SystemConfiguration: new Dictionary<string, JsonElement>()
                 {
-                    [typeof(Remote).FullName!] = new JsonObject()
+                    [typeof(Remote).FullName!] = JsonSerializer.SerializeToElement(new JsonObject()
                     {
                         ["templates"] = new JsonObject()
                         {
                             ["docker"] = $"ssh root@nexus-{satelliteId} bash run.sh {{git-url}} {{git-tag}} {{command}}",
                         }
-                    }
-                }.Deserialize<JsonElement>(),
-                SourceConfiguration: new JsonObject()
+                    })
+                },
+                SourceConfiguration: new Dictionary<string, JsonElement>()
                 {
-                    ["listen-address"] = "0.0.0.0",
-                    ["template"] = "docker",
-                    ["command"] = command,
-                    ["git-url"] = $"https://github.com/malstroem-labs/nexus-remoting-template-{satelliteId}",
-                    ["git-tag"] = "v1.0.0"
-                }.Deserialize<JsonElement>(),
+                    ["listen-address"] = JsonSerializer.SerializeToElement("0.0.0.0"),
+                    ["template"] = JsonSerializer.SerializeToElement("docker"),
+                    ["command"] = JsonSerializer.SerializeToElement(command),
+                    ["git-url"] = JsonSerializer.SerializeToElement($"https://github.com/malstroem-labs/nexus-remoting-template-{satelliteId}"),
+                    ["git-tag"] = JsonSerializer.SerializeToElement("v1.0.0")
+                },
                 RequestConfiguration: default
             );
         }

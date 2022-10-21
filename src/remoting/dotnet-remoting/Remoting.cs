@@ -218,9 +218,9 @@ public class RemoteCommunicator
 
             var context = new DataSourceContext(
                 resourceLocator,
-                systemConfiguration,
-                sourceConfiguration,
-                requestConfiguration
+                JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>>(systemConfiguration),
+                JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>>(sourceConfiguration),
+                JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>>(requestConfiguration)
             );
 
             await _dataSource.SetContextAsync(context, logger, CancellationToken.None);
