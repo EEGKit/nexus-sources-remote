@@ -37,7 +37,7 @@ namespace Nexus.Sources.Tests
             var actualGroups = actual.Resources!.SelectMany(resource => resource.Properties?.GetStringArray("groups")!);
             var actualDataTypes = actual.Resources!.SelectMany(resource => resource.Representations!.Select(representation => representation.DataType)).ToList();
 
-            var expectedProperties1 = new Dictionary<string, string>() { ["a"] = "b" };
+            var expectedProperties1 = new Dictionary<string, object>() { ["a"] = "b", ["c"] = 1 };
             var expectedIds = new List<string>() { "resource1", "resource2" };
             var expectedUnits = new List<string>() { "°C", "bar" };
             var expectedDataTypes = new List<NexusDataType>() { NexusDataType.INT64, NexusDataType.FLOAT64 };

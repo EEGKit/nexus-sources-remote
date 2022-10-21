@@ -2,7 +2,8 @@
   "Catalog": {
     "Id": "/A/B/C",
     "Properties": {
-      "a": "b"
+      "a": "b",
+      "c": 1
     },
     "Resources": [
       {

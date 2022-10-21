@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\..\src\remoting\dotnet-remoting\dotnet-remoting.csproj" />
+    <ProjectReference Include="..\..\..\..\..\src\remoting\dotnet-remoting\dotnet-remoting.csproj" />
   </ItemGroup>
 
 </Project>

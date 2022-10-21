@@ -57,6 +57,7 @@ class PythonDataSource(IDataSource):
 
             catalog = ResourceCatalogBuilder("/A/B/C") \
                 .with_property("a", "b") \
+                .with_property("c", 1) \
                 .add_resources([resource1, resource2]) \
                 .build()
 

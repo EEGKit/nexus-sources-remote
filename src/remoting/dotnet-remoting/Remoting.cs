@@ -205,22 +205,31 @@ public class RemoteCommunicator
             if (rawContext.TryGetProperty("resourceLocator", out var value))
                 resourceLocator = new Uri(value.GetString()!);
 
-            var systemConfiguration = default(JsonElement);
-            rawContext.TryGetProperty("systemConfiguration", out systemConfiguration);
+            // system configuration
+            IReadOnlyDictionary<string, JsonElement>? systemConfiguration = default;
 
-            var sourceConfiguration = default(JsonElement);
-            rawContext.TryGetProperty("sourceConfiguration", out sourceConfiguration);
+            if (rawContext.TryGetProperty("systemConfiguration", out var systemConfigurationElement))
+                systemConfiguration = JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>?>(systemConfigurationElement);
 
-            var requestConfiguration = default(JsonElement);
-            rawContext.TryGetProperty("requestConfiguration", out requestConfiguration);
+            // source configuration 
+            IReadOnlyDictionary<string, JsonElement>? sourceConfiguration = default;
+
+            if (rawContext.TryGetProperty("sourceConfiguration", out var sourceConfigurationElement))
+                sourceConfiguration = JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>?>(sourceConfigurationElement);
+
+            // request configuration 
+            IReadOnlyDictionary<string, JsonElement>? requestConfiguration = default;
+
+            if (rawContext.TryGetProperty("requestConfiguration", out var requestConfigurationElement))
+                requestConfiguration = JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>?>(requestConfigurationElement);
 
             var logger = new Logger(_tcpCommSocketStream);
 
             var context = new DataSourceContext(
                 resourceLocator,
-                JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>>(systemConfiguration),
-                JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>>(sourceConfiguration),
-                JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>>(requestConfiguration)
+                systemConfiguration,
+                sourceConfiguration,
+                requestConfiguration
             );
 
             await _dataSource.SetContextAsync(context, logger, CancellationToken.None);

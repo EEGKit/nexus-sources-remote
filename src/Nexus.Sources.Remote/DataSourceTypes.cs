@@ -55,15 +55,19 @@ namespace Nexus.Sources
 
         public override bool CanConvert(Type objectType)
         {
-            return objectType == typeof(JsonElement?);
+            var canConvert = objectType == typeof(JsonElement);
+            return canConvert;
         }
 
         public override object? ReadJson(Newtonsoft.Json.JsonReader reader, Type objectType, object? existingValue, Newtonsoft.Json.JsonSerializer serializer)
         {
             if (reader.TokenType == Newtonsoft.Json.JsonToken.Null)
-                return null;
-            
-            var serialized_tmp = JObject.Load(reader).ToString();
+                return default;
+
+            if (reader.TokenType == Newtonsoft.Json.JsonToken.String)
+                return JsonSerializer.SerializeToElement(JToken.Load(reader).ToString());
+          
+            var serialized_tmp = JToken.Load(reader).ToString();
             var deserialized = JsonSerializer.Deserialize<JsonElement>(serialized_tmp);
             return deserialized;
         }

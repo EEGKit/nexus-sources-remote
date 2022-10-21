@@ -45,6 +45,9 @@ public class DotnetDataSource : IDataSource
     {
         _context = context;
 
+        if (context.ResourceLocator is null)
+            throw new Exception($"Resource locator is required.");
+
         if (context.ResourceLocator.Scheme != "file")
             throw new Exception($"Expected 'file' URI scheme, but got '{context.ResourceLocator.Scheme}'.");
 
@@ -89,6 +92,7 @@ public class DotnetDataSource : IDataSource
 
             catalog = new ResourceCatalogBuilder("/A/B/C")
                 .WithProperty("a", "b")
+                .WithProperty("c", 1)
                 .AddResources(resource1, resource2)
                 .Build();
         }

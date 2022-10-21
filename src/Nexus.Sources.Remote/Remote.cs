@@ -232,7 +232,7 @@ namespace Nexus.Sources
             var command = Regex.Replace(template, "{(.*?)}", match => 
             {
                 var parameterKey = match.Groups[1].Value;
-                var parameterValue = Context.SourceConfiguration?.GetStringValue("parameterKey");
+                var parameterValue = Context.SourceConfiguration?.GetStringValue(parameterKey);
 
                 if (parameterValue is null)
                     throw new Exception($"The {parameterKey} parameter must be provided.");
