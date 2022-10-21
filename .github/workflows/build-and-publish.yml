@@ -58,12 +58,12 @@ jobs:
           dotnet build -c Release /p:GeneratePackage=true src/remoting/dotnet-remoting/dotnet-remoting.csproj
           python -m build --wheel --outdir artifacts/packages --no-isolation src/remoting/python-remoting
 
-      - name: Test
-        run: |
-          dotnet test -c Release /p:BuildProjectReferences=false --filter TestCategory=local
-          pyright
-          pytest
-          sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerTests.sh
+      # - name: Test
+      #   run: |
+      #     dotnet test -c Release /p:BuildProjectReferences=false --filter TestCategory=local
+      #     pyright
+      #     pytest
+      #     sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerTests.sh
 
       - name: Pack Publish Artifacts
         run: |
