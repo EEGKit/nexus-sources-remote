@@ -104,7 +104,7 @@ namespace Nexus.Sources
             var actualCommand = BuildCommand(templateId);
 
             //
-            var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromSeconds(60));
+            var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
 
             _communicator = new RemoteCommunicator(
                 actualCommand,
