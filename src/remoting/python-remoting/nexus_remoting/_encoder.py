@@ -7,7 +7,8 @@ import typing
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Callable, Optional, Type, TypeVar, Union, cast
+from typing import (Any, Callable, ClassVar, Optional, Type, TypeVar, Union,
+                    cast)
 from uuid import UUID
 
 T = TypeVar("T")
@@ -127,10 +128,10 @@ class JsonEncoder:
         elif dataclasses.is_dataclass(typeCls):
 
             parameters = {}
+            type_hints = typing.get_type_hints(typeCls)
 
             for key, value in data.items():
 
-                type_hints = typing.get_type_hints(typeCls)
                 key = options.property_name_decoder(key)
                 parameter_type = typing.cast(Type, type_hints.get(key))
                 
@@ -138,7 +139,22 @@ class JsonEncoder:
                     value = JsonEncoder._decode(parameter_type, value, options)
                     parameters[key] = value
 
-            return typeCls(**parameters)
+            # ensure default values if JSON does not serialize default fields
+            for key, value in type_hints.items():
+                if not key in parameters and not typing.get_origin(value) == ClassVar:
+                    
+                    if (value == int):
+                        parameters[key] = 0
+
+                    elif (value == float):
+                        parameters[key] = 0.0
+
+                    else:
+                        parameters[key] = None
+              
+            instance = typeCls(**parameters)
+
+            return instance
 
         # registered decoders
         for base in typeCls.__mro__[:-1]:
