@@ -20,7 +20,7 @@ if [ -f "requirements.txt" ]; then
 
     if [ -f "../tag_changed" ]; then
         echo "${green}Install requirements${white}"
-        python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ -r "requirements.txt" --disable-pip-version-check
+        python -m pip install --pre --index-url https://pypi.python.org/simple --extra-index-url https://www.myget.org/F/apollo3zehn-dev/python/ -r "requirements.txt" --disable-pip-version-check
     fi
 
 else
