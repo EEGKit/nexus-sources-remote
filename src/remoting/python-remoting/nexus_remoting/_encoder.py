@@ -7,8 +7,7 @@ import typing
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import (Any, Callable, ClassVar, Optional, Type, TypeVar, Union,
-                    cast)
+from typing import Any, Callable, Optional, Type, TypeVar, Union, cast
 from uuid import UUID
 
 T = TypeVar("T")
@@ -27,7 +26,7 @@ class JsonEncoderOptions:
     })
 
     decoders: dict[Type, Callable[[Type, Any], Any]] = field(default_factory=lambda: {
-        datetime:   lambda       _, value: datetime.fromisoformat(value.replace("Z", "+00:00")),
+        datetime:   lambda       _, value: datetime.fromisoformat((value[0:26] + value[26 + 1:]).replace("Z", "+00:00")),
         timedelta:  lambda       _, value: _decode_timedelta(value),
         Enum:       lambda typeCls, value: cast(Type[Enum], typeCls)[value],
         UUID:       lambda       _, value: UUID(value)
@@ -128,10 +127,10 @@ class JsonEncoder:
         elif dataclasses.is_dataclass(typeCls):
 
             parameters = {}
-            type_hints = typing.get_type_hints(typeCls)
 
             for key, value in data.items():
 
+                type_hints = typing.get_type_hints(typeCls)
                 key = options.property_name_decoder(key)
                 parameter_type = typing.cast(Type, type_hints.get(key))
                 
@@ -139,22 +138,7 @@ class JsonEncoder:
                     value = JsonEncoder._decode(parameter_type, value, options)
                     parameters[key] = value
 
-            # ensure default values if JSON does not serialize default fields
-            for key, value in type_hints.items():
-                if not key in parameters and not typing.get_origin(value) == ClassVar:
-                    
-                    if (value == int):
-                        parameters[key] = 0
-
-                    elif (value == float):
-                        parameters[key] = 0.0
-
-                    else:
-                        parameters[key] = None
-              
-            instance = typeCls(**parameters)
-
-            return instance
+            return typeCls(**parameters)
 
         # registered decoders
         for base in typeCls.__mro__[:-1]:
@@ -166,13 +150,14 @@ class JsonEncoder:
         # default
         return data
 
+# timespan is always serialized with 7 subsecond digits (https://github.com/dotnet/runtime/blob/a6cb7705bd5317ab5e9f718b55a82444156fc0c8/src/libraries/System.Text.Json/tests/System.Text.Json.Tests/Serialization/Value.WriteTests.cs#L178-L189)
 def _encode_timedelta(value: timedelta):
     hours, remainder = divmod(value.seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
-    result = f"{int(value.days)}.{int(hours):02}:{int(minutes):02}:{int(seconds):02}.{value.microseconds:06d}"
+    result = f"{int(value.days)}.{int(hours):02}:{int(minutes):02}:{int(seconds):02}.{value.microseconds:06d}0"
     return result
 
-timedelta_pattern = re.compile('^(?:([0-9]+)\\.)?([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\\.([0-9]+))?$')
+timedelta_pattern = re.compile(r"^(?:([0-9]+)\.)?([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\.([0-9]+))?$")
 
 def _decode_timedelta(value: str):
     # 12:08:07
@@ -183,10 +168,10 @@ def _decode_timedelta(value: str):
 
     if match:
         days = int(match.group(1)) if match.group(1) else 0
-        hours = int(match.group(2)) if match.group(2) else 0
-        minutes = int(match.group(3)) if match.group(3) else 0
-        seconds = int(match.group(4)) if match.group(4) else 0
-        microseconds = int(match.group(5)) if match.group(5) else 0
+        hours = int(match.group(2))
+        minutes = int(match.group(3))
+        seconds = int(match.group(4))
+        microseconds = int(match.group(5)) / 10.0 if match.group(5) else 0
 
         return typing.cast(T, timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds, microseconds=microseconds))
 
