@@ -1,3 +1,7 @@
+## v1.0.0-beta.20 - 2022-10-26
+
+Fix timespan -> timedelta deserialization bug.
+
 ## v1.0.0-beta.19 - 2022-10-21
 
 Follow Nexus changes.
