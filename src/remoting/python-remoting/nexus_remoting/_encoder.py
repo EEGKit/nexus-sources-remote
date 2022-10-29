@@ -83,6 +83,9 @@ class JsonEncoder:
         if data is None:
             return typing.cast(T, None)
 
+        if typeCls == Any:
+            return data
+
         origin = typing.cast(Type, typing.get_origin(typeCls))
         args = typing.get_args(typeCls)
 
