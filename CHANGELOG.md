@@ -1,3 +1,7 @@
+## v1.0.1 - 2022-10-29
+
+Fix the json decoder to support type "Any".
+
 ## v1.0.0 - 2022-10-29
 
 This is the first release.
