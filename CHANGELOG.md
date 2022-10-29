@@ -1,3 +1,7 @@
+## v1.0.0 - 2022-10-29
+
+This is the first release.
+
 ## v1.0.0-beta.20 - 2022-10-26
 
 Fix timespan -> timedelta deserialization bug.
