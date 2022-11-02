@@ -122,8 +122,12 @@ namespace Nexus.Sources
             if (apiVersion < 1 || apiVersion > Remote.API_LEVEL)
                 throw new Exception($"The API level '{apiVersion}' is not supported.");
 
+            logger.LogTrace("Set context to remote client");
+
             await _rpcServer
                 .SetContextAsync(context, timeoutTokenSource.Token);
+
+            logger.LogDebug("Done preparing remote client");
         }
 
         public async Task<CatalogRegistration[]> GetCatalogRegistrationsAsync(

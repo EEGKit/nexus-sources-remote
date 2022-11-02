@@ -73,6 +73,8 @@ namespace Nexus.Sources
                 cancellationToken.Register(() => _tcpListener.Stop());
 				
                 // start process
+                _logger.LogDebug("Start process.");
+                
                 var psi = new ProcessStartInfo(_command)
                 {
                     Arguments = _arguments,
@@ -105,6 +107,8 @@ namespace Nexus.Sources
                 _process.BeginErrorReadLine();
 
                 // wait for clients to connect
+                _logger.LogDebug("Wait for clients to connect.");
+
                 var filters = new string[] { "comm", "data" };
 
                 Stream? commStream = default;
