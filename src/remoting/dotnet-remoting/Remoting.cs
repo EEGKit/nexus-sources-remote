@@ -56,6 +56,7 @@ public class RemoteCommunicator
     private NetworkStream _tcpCommSocketStream = default!;
     private NetworkStream _tcpDataSocketStream = default!;
     private IDataSource _dataSource;
+    private ILogger _logger = default!;
 
     /// <summary>
     /// Initializes a new instance of the RemoteCommunicator.
@@ -108,7 +109,7 @@ public class RemoteCommunicator
 
             // get request message
             var size = ReadSize(_tcpCommSocketStream);
-            var jsonRequest = _tcpCommSocketStream.ReadExactly(size);
+            var jsonRequest = _tcpCommSocketStream.ReadExactly(size, _logger);
             var request = Read(jsonRequest);
 
             // process message
@@ -223,7 +224,7 @@ public class RemoteCommunicator
             if (rawContext.TryGetProperty("requestConfiguration", out var requestConfigurationElement))
                 requestConfiguration = JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>?>(requestConfigurationElement);
 
-            var logger = new Logger(_tcpCommSocketStream);
+            _logger = new Logger(_tcpCommSocketStream);
 
             var context = new DataSourceContext(
                 resourceLocator,
@@ -232,7 +233,7 @@ public class RemoteCommunicator
                 requestConfiguration
             );
 
-            await _dataSource.SetContextAsync(context, logger, CancellationToken.None);
+            await _dataSource.SetContextAsync(context, _logger, CancellationToken.None);
         }
 
         else if (methodName == "getCatalogRegistrations")
@@ -349,14 +350,16 @@ public class RemoteCommunicator
         await Utilities.SendToServerAsync(readDataRequest, _tcpCommSocketStream);
 
         var size = ReadSize(_tcpDataSocketStream);
-        var data = _tcpDataSocketStream.ReadExactly(size);
+        _logger.LogTrace("Try to read {ByteCount} bytes from Nexus", size);
+        
+        var data = _tcpDataSocketStream.ReadExactly(size, _logger);
 
         return new CastMemoryManager<byte, double>(data).Memory;
     }
 
     private int ReadSize(NetworkStream currentStream)
     {
-        var sizeBuffer = currentStream.ReadExactly(4);
+        var sizeBuffer = currentStream.ReadExactly(4, _logger);
         Array.Reverse(sizeBuffer);
 
         var size = BitConverter.ToInt32(sizeBuffer);
@@ -403,7 +406,7 @@ internal static class Utilities
 
 internal static class StreamExtensions
 {
-    public static byte[] ReadExactly(this Stream stream, int count)
+    public static byte[] ReadExactly(this Stream stream, int count, ILogger logger)
     {
         var buffer = new byte[count];
         var offset = 0;
@@ -413,7 +416,10 @@ internal static class StreamExtensions
             var read = stream.Read(buffer, offset, count - offset);
 
             if (read == 0)
+            {
+                logger.LogDebug("No data from Nexus received (exiting)");
                 Environment.Exit(0);
+            }
 
             offset += read;
         }
