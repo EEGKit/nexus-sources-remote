@@ -1,3 +1,7 @@
+## v1.0.1 - 2022-11-02
+
+Improve logging.
+
 ## v1.0.1 - 2022-10-29
 
 Fix the json decoder to support type "Any".
