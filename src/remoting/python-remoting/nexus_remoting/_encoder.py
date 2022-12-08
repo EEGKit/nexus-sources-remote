@@ -19,14 +19,14 @@ class JsonEncoderOptions:
     property_name_encoder: Callable[[str], str] = lambda value: value
     property_name_decoder: Callable[[str], str] = lambda value: value
 
-    encoders: dict[Type, Callable[[Any], Any]] = field(default_factory=lambda: {
+    encoders: dict[type, Callable[[Any], Any]] = field(default_factory=lambda: {
         datetime:   lambda value: value.isoformat().replace("+00:00", "Z"),
         timedelta:  lambda value: _encode_timedelta(value),
         Enum:       lambda value: value.name,
         UUID:       lambda value: str(value)
     })
 
-    decoders: dict[Type, Callable[[Type, Any], Any]] = field(default_factory=lambda: {
+    decoders: dict[type, Callable[[type, Any], Any]] = field(default_factory=lambda: {
         datetime:   lambda       _, value: datetime.fromisoformat((value[0:26] + value[26 + 1:]).replace("Z", "+00:00")),
         timedelta:  lambda       _, value: _decode_timedelta(value),
         Enum:       lambda typeCls, value: cast(Type[Enum], typeCls)[value],
@@ -86,7 +86,7 @@ class JsonEncoder:
         if typeCls == Any:
             return data
 
-        origin = typing.cast(Type, typing.get_origin(typeCls))
+        origin = typing.cast(type, typing.get_origin(typeCls))
         args = typing.get_args(typeCls)
 
         if origin is not None:
@@ -103,7 +103,7 @@ class JsonEncoder:
             elif issubclass(origin, list):
 
                 listType = args[0]
-                instance1: list = list()
+                instance1: list[Any] = list()
 
                 for value in data:
                     instance1.append(JsonEncoder._decode(listType, value, options))
@@ -116,7 +116,7 @@ class JsonEncoder:
                 # keyType = args[0]
                 valueType = args[1]
 
-                instance2: dict = dict()
+                instance2: dict[Any, Any] = dict()
 
                 for key, value in data.items():
                     instance2[key] = JsonEncoder._decode(valueType, value, options)
@@ -136,7 +136,7 @@ class JsonEncoder:
             for key, value in data.items():
 
                 key = options.property_name_decoder(key)
-                parameter_type = typing.cast(Type, type_hints.get(key))
+                parameter_type = typing.cast(type, type_hints.get(key))
                 
                 if (parameter_type is not None):
                     value = JsonEncoder._decode(parameter_type, value, options)
@@ -160,8 +160,8 @@ class JsonEncoder:
             return instance
 
         # registered decoders
-        for base in typeCls.__mro__[:-1]:
-            decoder = options.decoders.get(base)
+        for base in cast(Any, typeCls.__mro__)[:-1]: # need to cast to calm down pyright
+            decoder = options.decoders[base]
 
             if decoder is not None:
                 return decoder(typeCls, data)
