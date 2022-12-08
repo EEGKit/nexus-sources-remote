@@ -347,6 +347,8 @@ public class RemoteCommunicator
             ["params"] = new JsonArray(resourcePath, begin, end)
         };
 
+        _logger.LogDebug($"Read resource path {resourcePath} from Nexus");
+
         await Utilities.SendToServerAsync(readDataRequest, _tcpCommSocketStream);
 
         var size = ReadSize(_tcpDataSocketStream);

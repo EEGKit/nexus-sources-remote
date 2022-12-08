@@ -40,6 +40,8 @@ class _Logger(ILogger):
 class RemoteCommunicator:
     """A remote communicator."""
 
+    _logger: ILogger
+
     def __init__(self, data_source: IDataSource, address: str, port: int):
         """
         Initializes a new instance of the RemoteCommunicator.
@@ -160,7 +162,7 @@ class RemoteCommunicator:
             request_configuration = raw_context["requestConfiguration"] \
                 if "requestConfiguration" in raw_context else None
 
-            logger = _Logger(self._tcp_comm_socket)
+            self._logger = _Logger(self._tcp_comm_socket)
 
             context = DataSourceContext(
                 resource_locator,
@@ -168,7 +170,7 @@ class RemoteCommunicator:
                 source_configuration,
                 request_configuration)
 
-            await self._data_source.set_context(context, logger)
+            await self._data_source.set_context(context, self._logger)
 
         elif method_name == "getCatalogRegistrations":
 
@@ -244,6 +246,8 @@ class RemoteCommunicator:
         return (result, data, status)
 
     async def _handle_read_data(self, resource_path: str, begin: datetime, end: datetime) -> memoryview:
+
+        self._logger.log(LogLevel.Debug, f"Read resource path {resource_path} from Nexus")
 
         read_data_request = {
             "jsonrpc": "2.0",
