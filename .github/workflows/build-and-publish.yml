@@ -54,23 +54,15 @@ jobs:
 
       - name: Build
         run: |
-          dotnet publish -c Release -o publish /p:GeneratePackage=true src/Nexus.Sources.Remote/Nexus.Sources.Remote.csproj
           dotnet build -c Release /p:GeneratePackage=true src/remoting/dotnet-remoting/dotnet-remoting.csproj
           python -m build --wheel --outdir artifacts/packages --no-isolation src/remoting/python-remoting
 
       - name: Test
         run: |
-          dotnet test -c Release /p:BuildProjectReferences=false --filter TestCategory=local
+          dotnet test -c Release --filter TestCategory=local
           pyright
           pytest
           sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerTests.sh
-
-      - name: Pack Publish Artifacts
-        run: |
-          mkdir artifacts/publish
-          cd publish
-          tar -zcvf ../artifacts/publish/assets.tar.gz *
-          cd -
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
@@ -79,7 +71,6 @@ jobs:
           path: |
             artifacts/tag_body.txt
             artifacts/packages/
-            artifacts/publish/
 
     outputs:
       is_release: ${{ env.IS_RELEASE }}
@@ -137,7 +128,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           body_path: artifacts/tag_body.txt
-          files: artifacts/publish/assets.tar.gz
 
       - name: Nuget package (Nuget)
         run: dotnet nuget push 'artifacts/packages/*.nupkg' --api-key ${NUGET_API_KEY} --source https://api.nuget.org/v3/index.json

@@ -14,7 +14,7 @@ namespace Nexus.Remoting;
 
 internal class Logger : ILogger
 {
-    private NetworkStream _tcpCommSocketStream;
+    private readonly NetworkStream _tcpCommSocketStream;
 
     public Logger(NetworkStream tcpCommSocketStream)
     {
@@ -49,13 +49,13 @@ internal class Logger : ILogger
 /// </summary>
 public class RemoteCommunicator
 {
-    private string _address;
-    private int _port;
-    private TcpClient _tcpCommSocket;
-    private TcpClient _tcpDataSocket;
+    private readonly string _address;
+    private readonly int _port;
+    private readonly TcpClient _tcpCommSocket;
+    private readonly TcpClient _tcpDataSocket;
     private NetworkStream _tcpCommSocketStream = default!;
     private NetworkStream _tcpDataSocketStream = default!;
-    private IDataSource _dataSource;
+    private readonly IDataSource _dataSource;
     private ILogger _logger = default!;
 
     /// <summary>
@@ -84,7 +84,7 @@ public class RemoteCommunicator
     /// <returns></returns>
     public async Task RunAsync()
     {
-        JsonElement Read(byte[] jsonRequest)
+        static JsonElement Read(byte[] jsonRequest)
         {
             var reader = new Utf8JsonReader(jsonRequest);
             return JsonSerializer.Deserialize<JsonElement>(ref reader, Utilities.Options);
@@ -347,7 +347,7 @@ public class RemoteCommunicator
             ["params"] = new JsonArray(resourcePath, begin, end)
         };
 
-        _logger.LogDebug($"Read resource path {resourcePath} from Nexus");
+        _logger.LogDebug("Read resource path {ResourcePath} from Nexus", resourcePath);
 
         await Utilities.SendToServerAsync(readDataRequest, _tcpCommSocketStream);
 
@@ -371,7 +371,7 @@ public class RemoteCommunicator
 
 internal static class Utilities
 {
-    private static SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+    private static readonly SemaphoreSlim _semaphore = new(1, 1);
 
     static Utilities()
     {
