@@ -23,8 +23,8 @@ namespace Nexus.Sources.Tests
             await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
             var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
-            var resource = catalog.Resources!.First();
-            var representation = resource.Representations!.First();
+            var resource = catalog.Resources![0];
+            var representation = resource.Representations![0];
 
             var catalogItem = new CatalogItem(
                 catalog with { Resources = default! }, 
@@ -67,7 +67,7 @@ namespace Nexus.Sources.Tests
             Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
         }
 
-        private DataSourceContext CreateContext(string satelliteId, string command)
+        private static DataSourceContext CreateContext(string satelliteId, string command)
         {
             return new DataSourceContext(
                 ResourceLocator: new Uri("https://example.com"),
