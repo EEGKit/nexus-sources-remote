@@ -66,10 +66,10 @@ namespace Nexus.Sources.Tests
 
             await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
-            var actual = await dataSource.GetTimeRangeAsync("/A/B/C", CancellationToken.None);
+            var (begin, end) = await dataSource.GetTimeRangeAsync("/A/B/C", CancellationToken.None);
 
-            Assert.Equal(expectedBegin, actual.Begin);
-            Assert.Equal(expectedEnd, actual.End);
+            Assert.Equal(expectedBegin, begin);
+            Assert.Equal(expectedEnd, end);
         }
 
         [Theory]
@@ -106,8 +106,8 @@ namespace Nexus.Sources.Tests
             await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
             var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
-            var resource = catalog.Resources!.First();
-            var representation = resource.Representations!.First();
+            var resource = catalog.Resources![0];
+            var representation = resource.Representations![0];
 
             var catalogItem = new CatalogItem(
                 catalog with { Resources = default! }, 
@@ -193,8 +193,8 @@ namespace Nexus.Sources.Tests
             await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
             var catalog = await dataSource.GetCatalogAsync("/D/E/F", CancellationToken.None);
-            var resource = catalog.Resources!.First();
-            var representation = resource.Representations!.First();
+            var resource = catalog.Resources![0];
+            var representation = resource.Representations![0];
 
             var catalogItem = new CatalogItem(
                 catalog with { Resources = default! },
@@ -236,7 +236,7 @@ namespace Nexus.Sources.Tests
             Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
         }
 
-        private DataSourceContext CreateContext(string command)
+        private static DataSourceContext CreateContext(string command)
         {
             return new DataSourceContext(
                 ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),

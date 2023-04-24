@@ -1,33 +1,33 @@
-﻿using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
-using StreamJsonRpc;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
+using StreamJsonRpc;
 
 namespace Nexus.Sources
 {
-    internal class RemoteCommunicator
+    internal partial class RemoteCommunicator
     {
         #region Fields
 
-        private static object _lock = new object();
+        private static readonly object _lock = new();
         private static int _nextMin = -1;
-        private TcpListener _tcpListener;
+        private readonly TcpListener _tcpListener;
         private Stream _commStream = default!;
         private Stream _dataStream = default!;
         private IJsonRpcServer _rpcServer = default!;
 
-        private ILogger _logger;
-        private Func<string, DateTime, DateTime, Task> _readData;
+        private readonly ILogger _logger;
+        private readonly Func<string, DateTime, DateTime, Task> _readData;
 
-        private string _command;
-        private string _arguments;
-        private Dictionary<string, string> _environmentVariables;
+        private readonly string _command;
+        private readonly string _arguments;
+        private readonly Dictionary<string, string> _environmentVariables;
 
         private Process _process = default!;
 
@@ -50,7 +50,7 @@ namespace Nexus.Sources
 
             var listenPort = GetNextUnusedPort(listenPortMin, listenPortMax);
 
-            command = Regex.Replace(command, "{remote-port}", listenPort.ToString());
+            command = CommandRegex().Replace(command, listenPort.ToString());
             var commandParts = command.Split(" ", count: 2);
             _command = commandParts[0];
 
@@ -116,13 +116,13 @@ namespace Nexus.Sources
 
                 for (int i = 0; i < 2; i++)
                 {
-                    var response = await GetTcpClientAsync(filters, cancellationToken);
+                    var (identifier, client) = await GetTcpClientAsync(filters, cancellationToken);
 
-                    if (commStream is null && response.Identifier == "comm")
-                        commStream = response.Client.GetStream();
+                    if (commStream is null && identifier == "comm")
+                        commStream = client.GetStream();
 
-                    else if (dataStream is null && response.Identifier == "data")
-                        dataStream = response.Client.GetStream();
+                    else if (dataStream is null && identifier == "data")
+                        dataStream = client.GetStream();
                 }
 
                 if (commStream is null || dataStream is null)
@@ -188,7 +188,7 @@ namespace Nexus.Sources
             return InternalReadRawAsync(buffer, _dataStream, cancellationToken);
         }
 
-        private async Task InternalReadRawAsync(Memory<byte> buffer, Stream source, CancellationToken cancellationToken)
+        private static async Task InternalReadRawAsync(Memory<byte> buffer, Stream source, CancellationToken cancellationToken)
         {
             while (buffer.Length > 0)
             {
@@ -207,13 +207,13 @@ namespace Nexus.Sources
             return InternalWriteRawAsync(buffer, _dataStream, cancellationToken);
         }
 
-        private async Task InternalWriteRawAsync(ReadOnlyMemory<byte> buffer, Stream target, CancellationToken cancellationToken)
+        private static async Task InternalWriteRawAsync(ReadOnlyMemory<byte> buffer, Stream target, CancellationToken cancellationToken)
         {
             var length = BitConverter.GetBytes(buffer.Length).Reverse().ToArray();
 
             await target.WriteAsync(length, cancellationToken);
             await target.WriteAsync(buffer, cancellationToken);
-            await target.FlushAsync();
+            await target.FlushAsync(cancellationToken);
         }
 
         private static int GetNextUnusedPort(int min, int max)
@@ -311,6 +311,9 @@ namespace Nexus.Sources
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
+
+        [GeneratedRegex("{remote-port}")]
+        private static partial Regex CommandRegex();
 
         #endregion
     }

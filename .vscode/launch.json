@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/Nexus.Sources.Remote/bin/Debug/net6.0/Nexus.Sources.Remote.dll",
+            "program": "${workspaceFolder}/src/Nexus.Sources.Remote/bin/Debug/net7.0/Nexus.Sources.Remote.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Nexus.Sources.Remote",
             "console": "internalConsole",
