@@ -70,7 +70,7 @@ namespace Nexus.Sources
         {
             try
             {
-                cancellationToken.Register(() => _tcpListener.Stop());
+                cancellationToken.Register(_tcpListener.Stop);
 				
                 // start process
                 _logger.LogDebug("Start process.");

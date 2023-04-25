@@ -60,7 +60,15 @@ namespace Nexus.Sources.Tests
             }
 
             var request = new ReadRequest(catalogItem, data, status);
-            await dataSource.ReadAsync(begin, end, new ReadRequest[] { request }, ReadData, new Progress<double>(), CancellationToken.None);
+            
+            await dataSource.ReadAsync(
+                begin, 
+                end, 
+                new ReadRequest[] { request }, 
+                ReadData, 
+                new Progress<double>(), 
+                CancellationToken.None);
+
             var doubleData = new CastMemoryManager<byte, double>(data).Memory;
 
             Assert.True(expectedData.SequenceEqual(doubleData.ToArray()));
@@ -70,7 +78,7 @@ namespace Nexus.Sources.Tests
         private static DataSourceContext CreateContext(string satelliteId, string command)
         {
             return new DataSourceContext(
-                ResourceLocator: new Uri("https://example.com"),
+                ResourceLocator: default,
                 SystemConfiguration: new Dictionary<string, JsonElement>()
                 {
                     [typeof(Remote).FullName!] = JsonSerializer.SerializeToElement(new JsonObject()
@@ -87,7 +95,7 @@ namespace Nexus.Sources.Tests
                     ["template"] = JsonSerializer.SerializeToElement("docker"),
                     ["command"] = JsonSerializer.SerializeToElement(command),
                     ["git-url"] = JsonSerializer.SerializeToElement($"https://github.com/malstroem-labs/nexus-remoting-template-{satelliteId}"),
-                    ["git-tag"] = JsonSerializer.SerializeToElement("v1.0.0")
+                    ["git-tag"] = JsonSerializer.SerializeToElement("v2.0.0-beta.1")
                 },
                 RequestConfiguration: default
             );
