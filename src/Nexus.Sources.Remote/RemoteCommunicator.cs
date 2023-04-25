@@ -94,13 +94,13 @@ namespace Nexus.Sources
                 _process.OutputDataReceived += (sender, e) =>
                 {
                     if (!string.IsNullOrWhiteSpace(e.Data))
-                        _logger.LogDebug(e.Data);
+                        _logger.LogDebug("{Message}", e.Data);
                 };
 
                 _process.ErrorDataReceived += (sender, e) =>
                 {
                     if (!string.IsNullOrWhiteSpace(e.Data))
-                        _logger.LogWarning(e.Data);
+                        _logger.LogWarning("{Message}", e.Data);
                 };
 
                 _process.BeginOutputReadLine();
@@ -149,7 +149,7 @@ namespace Nexus.Sources
 
                 jsonRpc.AddLocalRpcMethod("log", new Action<LogLevel, string>((logLevel, message) =>
                 {
-                    _logger.Log(logLevel, message);
+                    _logger.Log(logLevel, "{Message}", message);
                 }));
 
                 jsonRpc.AddLocalRpcMethod("readData", _readData);
@@ -159,7 +159,7 @@ namespace Nexus.Sources
                 {
                     MethodNameTransform = pascalCaseAsyncName =>
                     {
-                        return char.ToLower(pascalCaseAsyncName[0]) + pascalCaseAsyncName.Substring(1).Replace("Async", string.Empty);
+                        return char.ToLower(pascalCaseAsyncName[0]) + pascalCaseAsyncName[1..].Replace("Async", string.Empty);
                     }
                 });
 
@@ -198,7 +198,7 @@ namespace Nexus.Sources
                 if (readCount == 0)
                     throw new Exception("The TCP connection closed early.");
 
-                buffer = buffer.Slice(readCount);
+                buffer = buffer[readCount..];
             }
         }
 

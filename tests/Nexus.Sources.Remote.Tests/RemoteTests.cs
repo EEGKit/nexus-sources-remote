@@ -132,7 +132,7 @@ namespace Nexus.Sources.Tests
                         .ToArray();
 
                     var offset = (int)(dateTime - begin).TotalSeconds;
-                    data.CopyTo(expectedData.AsSpan().Slice(offset));
+                    data.CopyTo(expectedData.AsSpan()[offset..]);
                     expectedStatus.AsSpan().Slice(offset, 600).Fill(1);
                 }
 

@@ -12,12 +12,12 @@ namespace Nexus.Sources
         "Provides access to remote databases",
         "https://github.com/malstroem-labs/nexus-sources-remote",
         "https://github.com/malstroem-labs/nexus-sources-remote")]
-    public class Remote : IDataSource, IDisposable
+    public partial class Remote : IDataSource, IDisposable
     {
         #region Fields
 
         private ReadDataHandler? _readData;
-        private static int API_LEVEL = 1;
+        private static readonly int API_LEVEL = 1;
         private RemoteCommunicator _communicator = default!;
         private IJsonRpcServer _rpcServer = default!;
 
@@ -91,8 +91,7 @@ namespace Nexus.Sources
             if (requestConfiguration.TryGetValue("environment-variables", out var propertyValue) &&
                 propertyValue.ValueKind == JsonValueKind.Object)
             {
-                var environmentVariablesRaw = JsonSerializer
-                    .Deserialize<Dictionary<string, JsonElement>>(propertyValue);
+                var environmentVariablesRaw = propertyValue                    .Deserialize<Dictionary<string, JsonElement>>();
                     
                 if (environmentVariablesRaw is not null)
                     environmentVariables = environmentVariablesRaw
@@ -119,7 +118,7 @@ namespace Nexus.Sources
 
             var apiVersion = (await _rpcServer.GetApiVersionAsync(timeoutTokenSource.Token)).ApiVersion;
 
-            if (apiVersion < 1 || apiVersion > Remote.API_LEVEL)
+            if (apiVersion < 1 || apiVersion > API_LEVEL)
                 throw new Exception($"The API level '{apiVersion}' is not supported.");
 
             logger.LogTrace("Set context to remote client");
@@ -233,7 +232,7 @@ namespace Nexus.Sources
             if (template is null)
                 throw new Exception($"The template {templateId} does not exist.");
 
-            var command = Regex.Replace(template, "{(.*?)}", match => 
+            var command = CommandRegex().Replace(template, match => 
             {
                 var parameterKey = match.Groups[1].Value;
                 var parameterValue = Context.SourceConfiguration?.GetStringValue(parameterKey);
@@ -261,7 +260,7 @@ namespace Nexus.Sources
             await _communicator.WriteRawAsync(byteData, timeoutTokenSource.Token);
         }
 
-        private CancellationTokenSource GetTimeoutTokenSource(TimeSpan timeout)
+        private static CancellationTokenSource GetTimeoutTokenSource(TimeSpan timeout)
         {
             var timeoutToken = new CancellationTokenSource();
             timeoutToken.CancelAfter(timeout);
@@ -293,6 +292,9 @@ namespace Nexus.Sources
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
+
+        [GeneratedRegex("{(.*?)}")]
+        private static partial Regex CommandRegex();
 
         #endregion
     }

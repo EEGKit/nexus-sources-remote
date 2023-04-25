@@ -48,7 +48,7 @@ namespace Nexus.Sources
 
     internal class JsonElementConverter : Newtonsoft.Json.JsonConverter
     {
-        internal static JsonSerializerOptions _serializerOptions = new JsonSerializerOptions()
+        internal static JsonSerializerOptions _serializerOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };

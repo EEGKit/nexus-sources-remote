@@ -10,7 +10,7 @@ namespace Nexus.Sources
 
             if (properties.TryGetValue(pathSegments[0], out var element))
             {
-                pathSegments = pathSegments.Slice(1);
+                pathSegments = pathSegments[1..];
 
                 if (pathSegments.Length == 0)
                 {
