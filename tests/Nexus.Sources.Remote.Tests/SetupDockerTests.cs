@@ -12,13 +12,13 @@ namespace Nexus.Sources.Tests
     {
 #if LINUX
         [Theory]
-        [InlineData("python", "main.py nexus-main {remote-port}")]
-        [InlineData("dotnet", "nexus-remoting-sample.csproj nexus-main {remote-port}")]
+        [InlineData("python", "main.py nexus-main {remote-port}", "v2.0.0-beta.1")]
+        [InlineData("dotnet", "nexus-remoting-sample.csproj nexus-main {remote-port}", "v2.0.0-beta.1")]
 #endif
-        public async Task CanReadFullDay(string satelliteId, string command)
+        public async Task CanReadFullDay(string satelliteId, string command, string version)
         {
             var dataSource = new Remote() as IDataSource;
-            var context = CreateContext(satelliteId, command);
+            var context = CreateContext(satelliteId, command, version);
 
             await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -75,7 +75,7 @@ namespace Nexus.Sources.Tests
             Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
         }
 
-        private static DataSourceContext CreateContext(string satelliteId, string command)
+        private static DataSourceContext CreateContext(string satelliteId, string command, string version)
         {
             return new DataSourceContext(
                 ResourceLocator: default,
@@ -95,7 +95,7 @@ namespace Nexus.Sources.Tests
                     ["template"] = JsonSerializer.SerializeToElement("docker"),
                     ["command"] = JsonSerializer.SerializeToElement(command),
                     ["git-url"] = JsonSerializer.SerializeToElement($"https://github.com/malstroem-labs/nexus-remoting-template-{satelliteId}"),
-                    ["git-tag"] = JsonSerializer.SerializeToElement("v2.0.0-beta.1")
+                    ["git-tag"] = JsonSerializer.SerializeToElement(version)
                 },
                 RequestConfiguration: default
             );
