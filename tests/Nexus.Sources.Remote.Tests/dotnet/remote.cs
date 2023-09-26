@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Buffers;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Nexus.DataModel;
@@ -265,8 +266,13 @@ public class DotnetDataSource : IDataSource
 
         foreach (var request in requests)
         {
-            var dataFromNexus = await readData("/need/more/data", begin, end, cancellationToken);
-            GenerateData(request, dataFromNexus.Span);
+            var length = (int)((end - begin).Ticks / request.CatalogItem.Representation.SamplePeriod.Ticks);
+
+            using var memoryOwner = MemoryPool<double>.Shared.Rent(length);
+            var buffer = memoryOwner.Memory.Slice(0, length);
+
+            await readData("/need/more/data/1_s", begin, end, buffer, cancellationToken);
+            GenerateData(request, buffer.Span);    
         }
     }
 }

@@ -192,7 +192,7 @@ class PythonDataSource(IDataSource):
         report_progress: Callable[[float], None]):
         
         for request in requests:
-            data_from_nexus = await read_data("/need/more/data", begin, end)
+            data_from_nexus = await read_data("/need/more/data/1_s", begin, end)
             double_data = request.data.cast("d")
 
             for i in range(0, len(double_data)):
