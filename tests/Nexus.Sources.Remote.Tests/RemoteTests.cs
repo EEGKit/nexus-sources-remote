@@ -218,14 +218,16 @@ namespace Nexus.Sources.Tests
                 .Select(value => (byte)1)
                 .ToArray();
 
-            Task<ReadOnlyMemory<double>> HandleReadDataAsync(string resourcePath, DateTime begin, DateTime end, CancellationToken cancellationToken)
+            Task HandleReadDataAsync(string resourcePath, DateTime begin, DateTime end, Memory<double> buffer, CancellationToken cancellationToken)
             {
-                ReadOnlyMemory<double> data = Enumerable
+                var data = Enumerable
                     .Range(0, length)
                     .Select(value => (double)value)
                     .ToArray();
 
-                return Task.FromResult(data);
+                data.CopyTo(buffer);
+
+                return Task.CompletedTask;
             }
 
             var request = new ReadRequest(catalogItem, data, status);

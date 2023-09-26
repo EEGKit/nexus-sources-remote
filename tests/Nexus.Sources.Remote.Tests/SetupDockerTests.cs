@@ -47,16 +47,16 @@ namespace Nexus.Sources.Tests
 
             expectedStatus.AsSpan().Fill(1);
 
-            Task<ReadOnlyMemory<double>> ReadData(string resourcePath, DateTime begin, DateTime end, CancellationToken cancellationToken)
+            Task ReadData(string resourcePath, DateTime begin, DateTime end, Memory<double> buffer, CancellationToken cancellationToken)
             {
-                var buffer = new double[length];
+                var spanBuffer = buffer.Span;
 
                 for (int i = 0; i < length; i++)
                 {
-                    buffer[i] = i;
+                    spanBuffer[i] = i;
                 }
 
-                return Task.FromResult(new ReadOnlyMemory<double>(buffer));
+                return Task.CompletedTask;
             }
 
             var request = new ReadRequest(catalogItem, data, status);

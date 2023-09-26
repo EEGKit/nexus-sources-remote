@@ -84,7 +84,7 @@ public class RemoteCommunicator
     /// <returns></returns>
     public async Task RunAsync()
     {
-        static JsonElement Read(byte[] jsonRequest)
+        static JsonElement Read(Span<byte> jsonRequest)
         {
             var reader = new Utf8JsonReader(jsonRequest);
             return JsonSerializer.Deserialize<JsonElement>(ref reader, Utilities.Options);
@@ -109,8 +109,12 @@ public class RemoteCommunicator
 
             // get request message
             var size = ReadSize(_tcpCommSocketStream);
-            var jsonRequest = _tcpCommSocketStream.ReadExactly(size, _logger);
-            var request = Read(jsonRequest);
+
+            using var memoryOwner = MemoryPool<byte>.Shared.Rent(size);
+            var messageMemory = memoryOwner.Memory.Slice(0, size);
+
+            _tcpCommSocketStream.ReadExactly(messageMemory.Span, _logger);
+            var request = Read(messageMemory.Span);
 
             // process message
             Memory<byte> data = default;
@@ -334,10 +338,11 @@ public class RemoteCommunicator
         return (result, data, status);
     }
 
-    private async Task<ReadOnlyMemory<double>> HandleReadDataAsync(
+    private async Task HandleReadDataAsync(
         string resourcePath,
         DateTime begin,
         DateTime end,
+        Memory<double> buffer,
         CancellationToken cancellationToken)
     {
         var readDataRequest = new JsonObject()
@@ -352,17 +357,20 @@ public class RemoteCommunicator
         await Utilities.SendToServerAsync(readDataRequest, _tcpCommSocketStream);
 
         var size = ReadSize(_tcpDataSocketStream);
+
+        if (size != buffer.Length * sizeof(double))
+            throw new Exception("Data returned by Nexus have an unexpected length");
+
         _logger.LogTrace("Try to read {ByteCount} bytes from Nexus", size);
         
-        var data = _tcpDataSocketStream.ReadExactly(size, _logger);
-
-        return new CastMemoryManager<byte, double>(data).Memory;
+        _tcpDataSocketStream.ReadExactly(MemoryMarshal.AsBytes(buffer.Span), _logger);
     }
 
     private int ReadSize(NetworkStream currentStream)
     {
-        var sizeBuffer = currentStream.ReadExactly(4, _logger);
-        Array.Reverse(sizeBuffer);
+        Span<byte> sizeBuffer = stackalloc byte[4];
+        currentStream.ReadExactly(sizeBuffer, _logger);
+        MemoryExtensions.Reverse(sizeBuffer);
 
         var size = BitConverter.ToInt32(sizeBuffer);
         return size;
@@ -408,14 +416,11 @@ internal static class Utilities
 
 internal static class StreamExtensions
 {
-    public static byte[] ReadExactly(this Stream stream, int count, ILogger logger)
+    public static void ReadExactly(this Stream stream, Span<byte> buffer, ILogger logger)
     {
-        var buffer = new byte[count];
-        var offset = 0;
-
-        while (offset < count)
+        while (buffer.Length > 0)
         {
-            var read = stream.Read(buffer, offset, count - offset);
+            var read = stream.Read(buffer);
 
             if (read == 0)
             {
@@ -423,10 +428,8 @@ internal static class StreamExtensions
                 Environment.Exit(0);
             }
 
-            offset += read;
+            buffer = buffer.Slice(read);
         }
-
-        return buffer;
     }
 }
 

@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using Nexus.DataModel;
 using Nexus.Extensibility;
+using System.Buffers;
 using System.Net;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -91,7 +93,7 @@ namespace Nexus.Sources
             if (requestConfiguration.TryGetValue("environment-variables", out var propertyValue) &&
                 propertyValue.ValueKind == JsonValueKind.Object)
             {
-                var environmentVariablesRaw = propertyValue                    .Deserialize<Dictionary<string, JsonElement>>();
+                var environmentVariablesRaw = propertyValue.Deserialize<Dictionary<string, JsonElement>>();
                     
                 if (environmentVariablesRaw is not null)
                     environmentVariables = environmentVariablesRaw
@@ -246,18 +248,45 @@ namespace Nexus.Sources
             return command;
         }
 
+        // copy from Nexus -> DataModelUtilities
+        private static readonly Regex _resourcePathEvaluator = new(@"^(?'catalog'.*)\/(?'resource'.*)\/(?'sample_period'[0-9]+_[a-zA-Z]+)(?:_(?'kind'[^\(#\s]+))?(?:\((?'parameters'.*)\))?(?:#(?'fragment'.*))?$", RegexOptions.Compiled);
+
+        private static MethodInfo _toSamplePeriodMethodInfo = typeof(DataModelExtensions)
+            .GetMethod("ToSamplePeriod", BindingFlags.Static | BindingFlags.NonPublic) ?? throw new Exception("Unable to locate ToSamplePeriod method.");
+
         private async Task HandleReadDataAsync(string resourcePath, DateTime begin, DateTime end)
         {
+            // copy of _readData handler
             var localReadData = _readData;
 
             if (localReadData is null)
                 throw new InvalidOperationException("Unable to read data without previous invocation of the ReadAsync method.");
 
+            // timeout token source
             var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-            var data = await localReadData(resourcePath, begin, end, timeoutTokenSource.Token);
-            var byteData = new CastMemoryManager<double, byte>(MemoryMarshal.AsMemory(data)).Memory;
 
-            await _communicator.WriteRawAsync(byteData, timeoutTokenSource.Token);
+            // find sample period
+            var match = _resourcePathEvaluator.Match(resourcePath);
+
+            if (!match.Success)
+                throw new Exception("Invalid resource path");
+
+            var samplePeriod = (TimeSpan)_toSamplePeriodMethodInfo.Invoke(null, new object[] { 
+                match.Groups["sample_period"].Value 
+            })!;
+
+            // find buffer length and rent buffer
+            var length = (int)((end - begin).Ticks / samplePeriod.Ticks);
+
+            using var memoryOwner = MemoryPool<double>.Shared.Rent(length);
+            var buffer = memoryOwner.Memory.Slice(0, length);
+
+            // read data
+            await localReadData(resourcePath, begin, end, buffer, timeoutTokenSource.Token);
+            var byteBuffer = new CastMemoryManager<double, byte>(buffer).Memory;
+
+            // write to communicator
+            await _communicator.WriteRawAsync(byteBuffer, timeoutTokenSource.Token);
         }
 
         private static CancellationTokenSource GetTimeoutTokenSource(TimeSpan timeout)
