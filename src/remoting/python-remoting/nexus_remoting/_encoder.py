@@ -47,7 +47,7 @@ class JsonEncoder:
 
         # None
         if value is None:
-            return typing.cast(T, None)
+            return None
 
         # list/tuple
         elif isinstance(value, list) or isinstance(value, tuple):
@@ -192,7 +192,7 @@ def _decode_timedelta(value: str):
         seconds = int(match.group(4))
         microseconds = int(match.group(5)) / 10.0 if match.group(5) else 0
 
-        return typing.cast(T, timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds, microseconds=microseconds))
+        return timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds, microseconds=microseconds)
 
     else:
         raise Exception(f"Unable to decode {value} into value of type timedelta.")

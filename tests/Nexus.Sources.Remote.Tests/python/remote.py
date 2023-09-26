@@ -15,12 +15,19 @@ from nexus_remoting import RemoteCommunicator
 
 class PythonDataSource(IDataSource):
     
+    _root: str
+
     async def set_context(self, context, logger):
         
         self._context: DataSourceContext = context
 
+        if (context.resource_locator is None or context.resource_locator.path is None):
+            raise Exception(f"No resource locator provided.")
+
         if (context.resource_locator.scheme != "file"):
             raise Exception(f"Expected 'file' URI scheme, but got '{context.resource_locator.scheme}'.")
+
+        self._root = context.resource_locator.path
 
         logger.log(LogLevel.Information, "Logging works!")
 
@@ -85,7 +92,7 @@ class PythonDataSource(IDataSource):
         if catalog_id != "/A/B/C":
             raise Exception("Unknown catalog identifier.")
 
-        file_paths = glob.glob(url2pathname(self._context.resource_locator.path) + "/**/*.dat", recursive=True)
+        file_paths = glob.glob(url2pathname(self._root) + "/**/*.dat", recursive=True)
         file_names = [os.path.basename(file_path) for file_path in file_paths]
         date_times = sorted([datetime.strptime(fileName, '%Y-%m-%d_%H-%M-%S.dat') for fileName in file_names])
         begin = date_times[0].replace(tzinfo = timezone.utc)
@@ -100,7 +107,7 @@ class PythonDataSource(IDataSource):
 
         period_per_file = timedelta(minutes = 10)
         max_file_count = (end - begin).total_seconds() / period_per_file.total_seconds()
-        file_paths = glob.glob(url2pathname(self._context.resource_locator.path) + "/**/*.dat", recursive=True)
+        file_paths = glob.glob(url2pathname(self._root) + "/**/*.dat", recursive=True)
         file_names = [os.path.basename(file_path) for file_path in file_paths]
         date_times = [datetime.strptime(fileName, '%Y-%m-%d_%H-%M-%S.dat') for fileName in file_names]
         filtered_date_times = [current for current in date_times if current >= begin and current < end]
@@ -152,7 +159,7 @@ class PythonDataSource(IDataSource):
             while current_begin < end:
 
                 # find files
-                search_pattern = url2pathname(self._context.resource_locator.path) + \
+                search_pattern = url2pathname(self._root) + \
                     f"/{current_begin.strftime('%Y-%m')}/{current_begin.strftime('%Y-%m-%d')}/*.dat"
 
                 file_paths = glob.glob(search_pattern, recursive=True)
