@@ -62,7 +62,7 @@ jobs:
           dotnet test -c Release --filter TestCategory=local
           pyright
           pytest
-          # sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerTests.sh
+          sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerTests.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
