@@ -260,7 +260,7 @@ public class RemoteTests
                 ["command"] = JsonSerializer.SerializeToElement(command),
                 ["environment-variables"] = JsonSerializer.SerializeToElement(new JsonObject()
                 {
-                    ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "remoting", "python-remoting")}"
+                    ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "src", "remoting", "python-remoting")}"
                 })
             },
             RequestConfiguration: default
