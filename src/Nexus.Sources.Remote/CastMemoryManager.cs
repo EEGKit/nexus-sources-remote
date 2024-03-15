@@ -1,25 +1,22 @@
 ﻿using System.Buffers;
 using System.Runtime.InteropServices;
 
-namespace Nexus.Sources
+namespace Nexus.Sources;
+
+internal class CastMemoryManager<TFrom, TTo>(Memory<TFrom> from) : MemoryManager<TTo>
+    where TFrom : struct
+    where TTo : struct
 {
-    internal class CastMemoryManager<TFrom, TTo> : MemoryManager<TTo>
-        where TFrom : struct
-        where TTo : struct
+    private readonly Memory<TFrom> _from = from;
+
+    public override Span<TTo> GetSpan() => MemoryMarshal.Cast<TFrom, TTo>(_from.Span);
+
+    protected override void Dispose(bool disposing)
     {
-        private readonly Memory<TFrom> _from;
-
-        public CastMemoryManager(Memory<TFrom> from) => _from = from;
-
-        public override Span<TTo> GetSpan() => MemoryMarshal.Cast<TFrom, TTo>(_from.Span);
-
-        protected override void Dispose(bool disposing)
-        {
-            //
-        }
-
-        public override MemoryHandle Pin(int elementIndex = 0) => throw new NotSupportedException("CastMemoryManager does not support pinning.");
-
-        public override void Unpin() => throw new NotSupportedException("CastMemoryManager does not support unpinning.");
+        //
     }
+
+    public override MemoryHandle Pin(int elementIndex = 0) => throw new NotSupportedException("CastMemoryManager does not support pinning.");
+
+    public override void Unpin() => throw new NotSupportedException("CastMemoryManager does not support unpinning.");
 }

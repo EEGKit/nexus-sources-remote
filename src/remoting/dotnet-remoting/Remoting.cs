@@ -12,14 +12,9 @@ using System.Text.Json.Serialization;
 
 namespace Nexus.Remoting;
 
-internal class Logger : ILogger
+internal class Logger(NetworkStream tcpCommSocketStream) : ILogger
 {
-    private readonly NetworkStream _tcpCommSocketStream;
-
-    public Logger(NetworkStream tcpCommSocketStream)
-    {
-        _tcpCommSocketStream = tcpCommSocketStream;
-    }
+    private readonly NetworkStream _tcpCommSocketStream = tcpCommSocketStream;
 
     public IDisposable BeginScope<TState>(TState state)
     {
@@ -111,7 +106,7 @@ public class RemoteCommunicator
             var size = ReadSize(_tcpCommSocketStream);
 
             using var memoryOwner = MemoryPool<byte>.Shared.Rent(size);
-            var messageMemory = memoryOwner.Memory.Slice(0, size);
+            var messageMemory = memoryOwner.Memory[..size];
 
             _tcpCommSocketStream.ReadExactly(messageMemory.Span, _logger);
             var request = Read(messageMemory.Span);
@@ -307,7 +302,7 @@ public class RemoteCommunicator
             await _dataSource.ReadAsync(
                 begin,
                 end,
-                new ReadRequest[] { readRequest },
+                [readRequest],
                 HandleReadDataAsync,
                 new Progress<double>(),
                 CancellationToken.None
@@ -362,7 +357,7 @@ public class RemoteCommunicator
             throw new Exception("Data returned by Nexus have an unexpected length");
 
         _logger.LogTrace("Try to read {ByteCount} bytes from Nexus", size);
-        
+
         _tcpDataSocketStream.ReadExactly(MemoryMarshal.AsBytes(buffer.Span), _logger);
     }
 
@@ -428,18 +423,16 @@ internal static class StreamExtensions
                 Environment.Exit(0);
             }
 
-            buffer = buffer.Slice(read);
+            buffer = buffer[read..];
         }
     }
 }
 
-internal class CastMemoryManager<TFrom, TTo> : MemoryManager<TTo>
+internal class CastMemoryManager<TFrom, TTo>(Memory<TFrom> from) : MemoryManager<TTo>
         where TFrom : struct
         where TTo : struct
 {
-    private readonly Memory<TFrom> _from;
-
-    public CastMemoryManager(Memory<TFrom> from) => _from = from;
+    private readonly Memory<TFrom> _from = from;
 
     public override Span<TTo> GetSpan() => MemoryMarshal.Cast<TFrom, TTo>(_from.Span);
 

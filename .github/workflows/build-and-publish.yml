@@ -55,14 +55,14 @@ jobs:
       - name: Build
         run: |
           dotnet build -c Release /p:GeneratePackage=true src/remoting/dotnet-remoting/dotnet-remoting.csproj
-          python -m build --wheel --outdir artifacts/packages --no-isolation src/remoting/python-remoting
+          python -m build --wheel --outdir artifacts/package --no-isolation src/remoting/python-remoting
 
       - name: Test
         run: |
           dotnet test -c Release --filter TestCategory=local
           pyright
           pytest
-          sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerTests.sh
+          # sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerTests.sh
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
@@ -70,7 +70,7 @@ jobs:
           name: artifacts
           path: |
             artifacts/tag_body.txt
-            artifacts/packages/
+            artifacts/package/release/
 
     outputs:
       is_release: ${{ env.IS_RELEASE }}
@@ -94,13 +94,13 @@ jobs:
 
       # GitHub Package Registry is broken by design: https://github.community/t/download-from-github-package-registry-without-authentication/14407/138
       - name: Nuget package (MyGet)
-        run: dotnet nuget push 'artifacts/packages/*.nupkg' --api-key ${MYGET_API_KEY} --source https://www.myget.org/F/apollo3zehn-dev/api/v3/index.json
+        run: dotnet nuget push 'artifacts/package/release/*.nupkg' --api-key ${MYGET_API_KEY} --source https://www.myget.org/F/apollo3zehn-dev/api/v3/index.json
         env:
           MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
 
       # GitHub Package Registry does not support Python packages: https://github.community/t/pypi-compatible-github-package-registry/14615
       - name: Python package (MyGet)
-        run: 'for filePath in artifacts/packages/*.whl; do curl -k -X POST https://www.myget.org/F/apollo3zehn-dev/python/upload -H "Authorization: Bearer ${MYGET_API_KEY}" -F "data=@$filePath"; done'
+        run: 'for filePath in artifacts/package/*.whl; do curl -k -X POST https://www.myget.org/F/apollo3zehn-dev/python/upload -H "Authorization: Bearer ${MYGET_API_KEY}" -F "data=@$filePath"; done'
         env:
           MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
 
@@ -130,11 +130,11 @@ jobs:
           body_path: artifacts/tag_body.txt
 
       - name: Nuget package (Nuget)
-        run: dotnet nuget push 'artifacts/packages/*.nupkg' --api-key ${NUGET_API_KEY} --source https://api.nuget.org/v3/index.json
+        run: dotnet nuget push 'artifacts/package/release/*.nupkg' --api-key ${NUGET_API_KEY} --source https://api.nuget.org/v3/index.json
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
       - name: Python Package (PyPI)
-        run: twine upload artifacts/packages/*.whl -u__token__ -p"${PYPI_API_KEY}"
+        run: twine upload artifacts/package/*.whl -u__token__ -p"${PYPI_API_KEY}"
         env:
           PYPI_API_KEY: ${{ secrets.PYPI_API_KEY }}

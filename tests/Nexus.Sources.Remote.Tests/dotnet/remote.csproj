@@ -6,11 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Nexus.Extensibility" Version="2.0.0-beta.19" />
+    <PackageReference Include="Nexus.Extensibility" Version="2.0.0-beta.24" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\..\src\remoting\dotnet-remoting\dotnet-remoting.csproj" />
+    <ProjectReference Include="../../../src/remoting/dotnet-remoting/dotnet-remoting.csproj" />
   </ItemGroup>
 
 </Project>
