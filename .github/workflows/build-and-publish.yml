@@ -70,7 +70,7 @@ jobs:
           name: artifacts
           path: |
             artifacts/tag_body.txt
-            artifacts/package/release/
+            artifacts/package/
 
     outputs:
       is_release: ${{ env.IS_RELEASE }}
