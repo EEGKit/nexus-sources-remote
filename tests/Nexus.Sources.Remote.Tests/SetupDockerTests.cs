@@ -12,7 +12,7 @@ public class SetupDockerTests
 {
 #if LINUX
     [Theory]
-    [InlineData("python", "main.py nexus-main {remote-port}", "v2.0.0-beta.24")]
+    [InlineData("python", "main.py nexus-main {remote-port}", "v2.0.0-beta.25")]
     [InlineData("dotnet", "nexus-remoting-sample.csproj nexus-main {remote-port}", "v2.0.0-beta.24")]
 #endif
     public async Task CanReadFullDay(string satelliteId, string command, string version)
