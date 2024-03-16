@@ -12,8 +12,8 @@ public class SetupDockerTests
 {
 #if LINUX
     [Theory]
-    [InlineData("python", "main.py nexus-main {remote-port}", "v2.0.0-beta.1")]
-    [InlineData("dotnet", "nexus-remoting-sample.csproj nexus-main {remote-port}", "v2.0.0-beta.3")]
+    [InlineData("python", "main.py nexus-main {remote-port}", "v2.0.0-beta.24")]
+    [InlineData("dotnet", "nexus-remoting-sample.csproj nexus-main {remote-port}", "v2.0.0-beta.24")]
 #endif
     public async Task CanReadFullDay(string satelliteId, string command, string version)
     {
@@ -85,7 +85,7 @@ public class SetupDockerTests
                 {
                     ["templates"] = new JsonObject()
                     {
-                        ["docker"] = $"ssh root@nexus-{satelliteId} bash run.sh {{git-url}} {{git-tag}} {{command}}",
+                        ["docker"] = $"ssh root@nexus-{satelliteId} bash run.sh {{git-url}} {{git-tag}} {{command}}"
                     }
                 })
             },
