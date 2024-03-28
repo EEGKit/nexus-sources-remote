@@ -94,7 +94,7 @@ public class SetupDockerTests
                 ["listen-address"] = JsonSerializer.SerializeToElement("0.0.0.0"),
                 ["template"] = JsonSerializer.SerializeToElement("docker"),
                 ["command"] = JsonSerializer.SerializeToElement(command),
-                ["git-url"] = JsonSerializer.SerializeToElement($"https://github.com/malstroem-labs/nexus-remoting-template-{satelliteId}"),
+                ["git-url"] = JsonSerializer.SerializeToElement($"https://github.com/nexus-main/nexus-remoting-template-{satelliteId}"),
                 ["git-tag"] = JsonSerializer.SerializeToElement(version)
             },
             RequestConfiguration: default

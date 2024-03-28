@@ -1,6 +1,6 @@
 # Nexus Remote Data Source
 
-[![GitHub Actions](https://github.com/malstroem-labs/nexus-sources-remote/actions/workflows/build-and-publish.yml/badge.svg?branch=master)](https://github.com/malstroem-labs/nexus-sources-remote/actions)
+[![GitHub Actions](https://github.com/nexus-main/nexus-sources-remote/actions/workflows/build-and-publish.yml/badge.svg?branch=master)](https://github.com/nexus-main/nexus-sources-remote/actions)
 
 The RPC data source is different from normal data sources in that it allows any code to be executed which imposes a security risk. Additionally, the command to be executed (e.g. python) might not exist in the current environment. Nexus is distributed as Docker Container with minimum dependencies. Therefore another solution must exist to extend the system. An option would be to use Docker-in-Docker (`dind`) and start a new container which is just another command for the RCP data source. The container itself could be a calculation-only environment with network access (but no drive access).
 
