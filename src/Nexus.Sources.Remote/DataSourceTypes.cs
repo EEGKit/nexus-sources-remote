@@ -54,7 +54,12 @@ internal class JsonElementConverter : Newtonsoft.Json.JsonConverter
         return canConvert;
     }
 
-    public override object? ReadJson(Newtonsoft.Json.JsonReader reader, Type objectType, object? existingValue, Newtonsoft.Json.JsonSerializer serializer)
+    public override object? ReadJson(
+        Newtonsoft.Json.JsonReader reader, 
+        Type objectType, 
+        object? existingValue, 
+        Newtonsoft.Json.JsonSerializer serializer
+    )
     {
         if (reader.TokenType == Newtonsoft.Json.JsonToken.Null)
             return default;

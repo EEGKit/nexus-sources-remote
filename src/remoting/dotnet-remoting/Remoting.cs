@@ -5,18 +5,17 @@ using System.Buffers;
 using System.Globalization;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace Nexus.Remoting;
 
-internal class Logger(NetworkStream tcpCommSocketStream) : ILogger
+internal class Logger(NetworkStream commStream) : ILogger
 {
-    private readonly NetworkStream _tcpCommSocketStream = tcpCommSocketStream;
+    private readonly NetworkStream _commStream = commStream;
 
-    public IDisposable BeginScope<TState>(TState state)
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
         throw new NotImplementedException("Scopes are not supported on this logger.");
     }
@@ -26,7 +25,13 @@ internal class Logger(NetworkStream tcpCommSocketStream) : ILogger
         return true;
     }
 
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    public void Log<TState>(
+        LogLevel logLevel, 
+        EventId eventId, 
+        TState state, 
+        Exception? exception, 
+        Func<TState, Exception?, string> formatter
+    )
     {
         var notification = new JsonObject()
         {
@@ -35,7 +40,7 @@ internal class Logger(NetworkStream tcpCommSocketStream) : ILogger
             ["params"] = new JsonArray(logLevel.ToString(), formatter(state, exception))
         };
 
-        _ = Utilities.SendToServerAsync(notification, _tcpCommSocketStream);
+        _ = Utilities.SendToServerAsync(notification, _commStream);
     }
 }
 
@@ -44,33 +49,37 @@ internal class Logger(NetworkStream tcpCommSocketStream) : ILogger
 /// </summary>
 public class RemoteCommunicator
 {
-    private readonly string _address;
-    private readonly int _port;
-    private readonly TcpClient _tcpCommSocket;
-    private readonly TcpClient _tcpDataSocket;
-    private NetworkStream _tcpCommSocketStream = default!;
-    private NetworkStream _tcpDataSocketStream = default!;
-    private readonly IDataSource _dataSource;
+    private readonly TcpClient _comm;
+
+    private readonly TcpClient _data;
+
+    private readonly NetworkStream _commStream;
+
+    private readonly NetworkStream _dataStream;
+
+    private readonly Func<string, IDataSource> _getDataSource;
+
     private ILogger _logger = default!;
 
     /// <summary>
-    /// Initializes a new instance of the RemoteCommunicator.
+    /// Initializes a new instance of the <see cref="RemoteCommunicator" />.
     /// </summary>
-    /// <param name="dataSource">The data source</param>
-    /// <param name="address">The address to connect to</param>
-    /// <param name="port">The port to connect to</param>
-    public RemoteCommunicator(IDataSource dataSource, string address, int port)
+    /// <param name="comm">The TCP client for communications.</param>
+    /// <param name="data">The TCP client for data.</param>
+    /// <param name="getDataSource">A func to get a new data source instance by its type name.</param>
+    public RemoteCommunicator(
+        TcpClient comm, 
+        TcpClient data, 
+        Func<string, IDataSource> getDataSource
+    )
     {
-        _address = address;
-        _port = port;
+        _comm = comm;
+        _commStream = comm.GetStream();
 
-        _tcpCommSocket = new TcpClient();
-        _tcpDataSocket = new TcpClient();
+        _data = data;
+        _dataStream = data.GetStream();
 
-        if (!(0 < port && port < 65536))
-            throw new Exception($"The port {port} is not a valid port number.");
-
-        _dataSource = dataSource;
+        _getDataSource = getDataSource;
     }
 
     /// <summary>
@@ -85,30 +94,18 @@ public class RemoteCommunicator
             return JsonSerializer.Deserialize<JsonElement>(ref reader, Utilities.Options);
         }
 
-        // comm connection
-        await _tcpCommSocket.ConnectAsync(_address, _port);
-        _tcpCommSocketStream = _tcpCommSocket.GetStream();
-        await _tcpCommSocketStream.WriteAsync(Encoding.UTF8.GetBytes("comm"));
-        await _tcpCommSocketStream.FlushAsync();
-
-        // data connection
-        await _tcpDataSocket.ConnectAsync(_address, _port);
-        _tcpDataSocketStream = _tcpDataSocket.GetStream();
-        await _tcpDataSocketStream.WriteAsync(Encoding.UTF8.GetBytes("data"));
-        await _tcpDataSocketStream.FlushAsync();
-
         // loop
         while (true)
         {
             // https://www.jsonrpc.org/specification
 
             // get request message
-            var size = ReadSize(_tcpCommSocketStream);
+            var size = ReadSize(_commStream);
 
             using var memoryOwner = MemoryPool<byte>.Shared.Rent(size);
             var messageMemory = memoryOwner.Memory[..size];
 
-            _tcpCommSocketStream.ReadExactly(messageMemory.Span, _logger);
+            _commStream.ReadExactly(messageMemory.Span, _logger);
             var request = Read(messageMemory.Span);
 
             // process message
@@ -166,14 +163,14 @@ public class RemoteCommunicator
             response.Add("id", id);
 
             // send response
-            await Utilities.SendToServerAsync(response, _tcpCommSocketStream);
+            await Utilities.SendToServerAsync(response, _commStream);
 
             // send data
             if (!data.Equals(default) && !status.Equals(default))
             {
-                await _tcpDataSocketStream.WriteAsync(data);
-                await _tcpDataSocketStream.WriteAsync(status);
-                await _tcpDataSocketStream.FlushAsync();
+                await _dataStream.WriteAsync(data);
+                await _dataStream.WriteAsync(status);
+                await _dataStream.FlushAsync();
             }
         }
     }
@@ -185,6 +182,7 @@ public class RemoteCommunicator
         JsonObject? result = default;
         Memory<byte> data = default;
         Memory<byte> status = default;
+        IDataSource? dataSource = default;
 
         var methodName = request.GetProperty("method").GetString();
         var @params = request.GetProperty("params");
@@ -201,6 +199,12 @@ public class RemoteCommunicator
         {
             var rawContext = @params[0];
             var resourceLocator = default(Uri?);
+
+            if (rawContext.TryGetProperty("type", out var type))
+                dataSource = _getDataSource(type.ToString());
+
+            else
+                throw new Exception("The type property is required");
 
             if (rawContext.TryGetProperty("resourceLocator", out var value))
                 resourceLocator = new Uri(value.GetString()!);
@@ -223,7 +227,7 @@ public class RemoteCommunicator
             if (rawContext.TryGetProperty("requestConfiguration", out var requestConfigurationElement))
                 requestConfiguration = JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>?>(requestConfigurationElement);
 
-            _logger = new Logger(_tcpCommSocketStream);
+            _logger = new Logger(_commStream);
 
             var context = new DataSourceContext(
                 resourceLocator,
@@ -232,13 +236,16 @@ public class RemoteCommunicator
                 requestConfiguration
             );
 
-            await _dataSource.SetContextAsync(context, _logger, CancellationToken.None);
+            await dataSource.SetContextAsync(context, _logger, CancellationToken.None);
         }
 
         else if (methodName == "getCatalogRegistrations")
         {
+            if (dataSource is null)
+                throw new Exception("The data source context must be set before invoking other methods.");
+
             var path = @params[0].GetString()!;
-            var registrations = await _dataSource.GetCatalogRegistrationsAsync(path, CancellationToken.None);
+            var registrations = await dataSource.GetCatalogRegistrationsAsync(path, CancellationToken.None);
 
             result = new JsonObject()
             {
@@ -248,8 +255,11 @@ public class RemoteCommunicator
 
         else if (methodName == "getCatalog")
         {
+            if (dataSource is null)
+                throw new Exception("The data source context must be set before invoking other methods.");
+
             var catalogId = @params[0].GetString()!;
-            var catalog = await _dataSource.GetCatalogAsync(catalogId, CancellationToken.None);
+            var catalog = await dataSource.GetCatalogAsync(catalogId, CancellationToken.None);
 
             result = new JsonObject()
             {
@@ -259,8 +269,11 @@ public class RemoteCommunicator
 
         else if (methodName == "getTimeRange")
         {
+            if (dataSource is null)
+                throw new Exception("The data source context must be set before invoking other methods.");
+
             var catalogId = @params[0].GetString()!;
-            var (begin, end) = await _dataSource.GetTimeRangeAsync(catalogId, CancellationToken.None);
+            var (begin, end) = await dataSource.GetTimeRangeAsync(catalogId, CancellationToken.None);
 
             result = new JsonObject()
             {
@@ -271,6 +284,9 @@ public class RemoteCommunicator
 
         else if (methodName == "getAvailability")
         {
+            if (dataSource is null)
+                throw new Exception("The data source context must be set before invoking other methods.");
+
             var catalogId = @params[0].GetString()!;
 
             var beginString = @params[1].GetString()!;
@@ -279,7 +295,7 @@ public class RemoteCommunicator
             var endString = @params[2].GetString()!;
             var end = DateTime.ParseExact(endString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
 
-            var availability = await _dataSource.GetAvailabilityAsync(catalogId, begin, end, CancellationToken.None);
+            var availability = await dataSource.GetAvailabilityAsync(catalogId, begin, end, CancellationToken.None);
 
             result = new JsonObject()
             {
@@ -289,6 +305,9 @@ public class RemoteCommunicator
 
         else if (methodName == "readSingle")
         {
+            if (dataSource is null)
+                throw new Exception("The data source context must be set before invoking other methods.");
+
             var beginString = @params[0].GetString()!;
             var begin = DateTime.ParseExact(beginString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture).ToUniversalTime();
 
@@ -299,7 +318,7 @@ public class RemoteCommunicator
             (data, status) = ExtensibilityUtilities.CreateBuffers(catalogItem.Representation, begin, end);
             var readRequest = new ReadRequest(catalogItem, data, status);
 
-            await _dataSource.ReadAsync(
+            await dataSource.ReadAsync(
                 begin,
                 end,
                 [readRequest],
@@ -349,16 +368,16 @@ public class RemoteCommunicator
 
         _logger.LogDebug("Read resource path {ResourcePath} from Nexus", resourcePath);
 
-        await Utilities.SendToServerAsync(readDataRequest, _tcpCommSocketStream);
+        await Utilities.SendToServerAsync(readDataRequest, _commStream);
 
-        var size = ReadSize(_tcpDataSocketStream);
+        var size = ReadSize(_dataStream);
 
         if (size != buffer.Length * sizeof(double))
             throw new Exception("Data returned by Nexus have an unexpected length");
 
         _logger.LogTrace("Try to read {ByteCount} bytes from Nexus", size);
 
-        _tcpDataSocketStream.ReadExactly(MemoryMarshal.AsBytes(buffer.Span), _logger);
+        _dataStream.ReadExactly(MemoryMarshal.AsBytes(buffer.Span), _logger);
     }
 
     private int ReadSize(NetworkStream currentStream)
@@ -390,7 +409,7 @@ internal static class Utilities
 
     public static async Task SendToServerAsync(JsonNode response, NetworkStream currentStream)
     {
-        var encodedResponse = JsonSerializer.SerializeToUtf8Bytes(response, Utilities.Options);
+        var encodedResponse = JsonSerializer.SerializeToUtf8Bytes(response, Options);
         var messageLength = BitConverter.GetBytes(encodedResponse.Length);
         Array.Reverse(messageLength);
 

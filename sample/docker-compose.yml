@@ -1,0 +1,9 @@
+version: "3.7"
+
+services:
+
+  nexus-agent:
+    container_name: nexus-agent
+    image: mcr.microsoft.com/dotnet/sdk:9.0
+    entrypoint: bash -c "git clone https://github.com/nexus-main/nexus-sources-remote; dotnet run --project src/Nexus.Agent/Nexus.Agent.csproj"
+    restart: always
