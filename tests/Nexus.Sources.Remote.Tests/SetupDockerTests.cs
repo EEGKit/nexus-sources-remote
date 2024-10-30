@@ -22,7 +22,7 @@ public class SetupDockerTests
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
-        var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
+        var catalog = await dataSource.EnrichCatalogAsync(new ResourceCatalog("/A/B/C"), CancellationToken.None);
         var resource = catalog.Resources![0];
         var representation = resource.Representations![0];
 
@@ -59,7 +59,7 @@ public class SetupDockerTests
             return Task.CompletedTask;
         }
 
-        var request = new ReadRequest(catalogItem, data, status);
+        var request = new ReadRequest(resource.Id, catalogItem, data, status);
 
         await dataSource.ReadAsync(
             begin,

@@ -75,7 +75,7 @@ listen() {
         elif [ "$method" = "getCatalogIds" ]; then
             response='{ "jsonrpc": "2.0", "id": '$id', "result": { "CatalogIds": [ "/A/B/C" ] } }'
 
-        elif [ "$method" = "getCatalog" ]; then
+        elif [ "$method" = "enrichCatalog" ]; then
             catalog=$(<bash/catalog.json)
             response='{ "jsonrpc": "2.0", "id": '$id', "result": '"$catalog"' }'
 

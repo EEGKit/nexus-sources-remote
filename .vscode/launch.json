@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Nexus.Agent",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-nexus-agent",
+            "program": "${workspaceFolder}/artifacts/bin/Nexus.Agent/debug/Nexus.Agent.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        }
+    ]
+}

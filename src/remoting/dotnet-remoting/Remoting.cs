@@ -197,14 +197,11 @@ public class RemoteCommunicator
 
         else if (methodName == "setContext")
         {
-            var rawContext = @params[0];
+            var type = @params[0].ToString();
+            var rawContext = @params[1];
             var resourceLocator = default(Uri?);
 
-            if (rawContext.TryGetProperty("type", out var type))
-                dataSource = _getDataSource(type.ToString());
-
-            else
-                throw new Exception("The type property is required");
+            dataSource = _getDataSource(type);
 
             if (rawContext.TryGetProperty("resourceLocator", out var value))
                 resourceLocator = new Uri(value.GetString()!);
@@ -253,13 +250,13 @@ public class RemoteCommunicator
             };
         }
 
-        else if (methodName == "getCatalog")
+        else if (methodName == "enrichCatalog")
         {
             if (dataSource is null)
                 throw new Exception("The data source context must be set before invoking other methods.");
 
-            var catalogId = @params[0].GetString()!;
-            var catalog = await dataSource.GetCatalogAsync(catalogId, CancellationToken.None);
+            var originalCatalog = JsonSerializer.Deserialize<ResourceCatalog>(@params[0])!;
+            var catalog = await dataSource.EnrichCatalogAsync(originalCatalog, CancellationToken.None);
 
             result = new JsonObject()
             {
@@ -314,9 +311,11 @@ public class RemoteCommunicator
             var endString = @params[1].GetString()!;
             var end = DateTime.ParseExact(endString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture).ToUniversalTime();
 
-            var catalogItem = JsonSerializer.Deserialize<CatalogItem>(@params[2], Utilities.Options)!;
+            var originalResourceName = @params[2].GetString()!;
+
+            var catalogItem = JsonSerializer.Deserialize<CatalogItem>(@params[3], Utilities.Options)!;
             (data, status) = ExtensibilityUtilities.CreateBuffers(catalogItem.Representation, begin, end);
-            var readRequest = new ReadRequest(catalogItem, data, status);
+            var readRequest = new ReadRequest(originalResourceName, catalogItem, data, status);
 
             await dataSource.ReadAsync(
                 begin,

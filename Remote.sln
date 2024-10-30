@@ -19,7 +19,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nexus.Benchmarks", "benchmarks\Nexus.Benchmarks\Nexus.Benchmarks.csproj", "{B602750B-5E89-453F-841B-8D7F22DE58EB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "nexus-agent", "src\Nexus.Agent\nexus-agent.csproj", "{71F41120-5BC2-4684-ADB7-C8C97CCE8EAF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nexus.Agent", "src\Nexus.Agent\Nexus.Agent.csproj", "{71F41120-5BC2-4684-ADB7-C8C97CCE8EAF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

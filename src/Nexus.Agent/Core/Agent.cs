@@ -13,6 +13,8 @@ namespace Nexus.Agent;
 
 public class Agent
 {
+    private Lock _lock = new();
+
     private readonly ConcurrentDictionary<Guid, TcpClientPair> _tcpClientPairs = new();
 
     public async Task RunAsync()
@@ -48,13 +50,14 @@ public class Agent
 
     private Task AcceptClientsAsync(IExtensionHive extensionHive)
     {
-        var tcpListenerComm = new TcpListener(IPAddress.Any, 56145);
+        var tcpListener = new TcpListener(IPAddress.Any, 56145);
+        tcpListener.Start();
 
         return Task.Run(async () =>
         {
             while (true)
             {
-                var client = await tcpListenerComm.AcceptTcpClientAsync();
+                var client = await tcpListener.AcceptTcpClientAsync();
 
                 _ = Task.Run(async () =>
                 {
@@ -127,17 +130,31 @@ public class Agent
                         else
                         {
                             client.Dispose();
+                            return;
                         }
 
                         var pair = _tcpClientPairs[id];
 
-                        if (pair.Comm is not null && pair.Data is not null)
+                        lock (_lock)
                         {
-                            pair.RemoteCommunicator = new RemoteCommunicator(
-                                pair.Comm,
-                                pair.Data,
-                                getDataSource: type => extensionHive.GetInstance<IDataSource>(type)
-                            );
+                            if (pair.Comm is not null && pair.Data is not null && pair.RemoteCommunicator is null)
+                            {
+                                try
+                                {
+                                    pair.RemoteCommunicator = new RemoteCommunicator(
+                                        pair.Comm,
+                                        pair.Data,
+                                        getDataSource: type => extensionHive.GetInstance<IDataSource>(type)
+                                    );
+
+                                    _ = pair.RemoteCommunicator.RunAsync();
+                                }
+                                catch
+                                {
+                                    pair.Comm?.Dispose();
+                                    pair.Data?.Dispose();
+                                }
+                            }
                         }
                     }
                 });

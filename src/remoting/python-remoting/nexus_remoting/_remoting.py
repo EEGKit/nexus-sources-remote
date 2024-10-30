@@ -149,7 +149,9 @@ class RemoteCommunicator:
 
         elif method_name == "setContext":
 
-            raw_context = params[0]
+            # TODO: make use of the type (see C# implementation)
+            type = params[0]
+            raw_context = params[1]
             resource_locator_string = cast(str, raw_context["resourceLocator"]) if "resourceLocator" in raw_context else None
             resource_locator = None if resource_locator_string is None else urlparse(resource_locator_string)
 
@@ -215,9 +217,10 @@ class RemoteCommunicator:
 
             begin = datetime.strptime(params[0], "%Y-%m-%dT%H:%M:%SZ")
             end = datetime.strptime(params[1], "%Y-%m-%dT%H:%M:%SZ")
-            catalog_item = JsonEncoder.decode(CatalogItem, params[2], _json_encoder_options)
+            original_resource_name = params[2]
+            catalog_item = JsonEncoder.decode(CatalogItem, params[3], _json_encoder_options)
             (data, status) = ExtensibilityUtilities.create_buffers(catalog_item.representation, begin, end)
-            read_request = ReadRequest(catalog_item, data, status)
+            read_request = ReadRequest(original_resource_name, catalog_item, data, status)
 
             await self._data_source.read(
                 begin, 

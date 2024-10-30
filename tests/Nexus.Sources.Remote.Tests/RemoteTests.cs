@@ -21,16 +21,16 @@ public class RemoteTests
 #endif
     public async Task ProvidesCatalog(string command)
     {
-        // arrange
+        // Arrange
         var dataSource = new Remote() as IDataSource;
         var context = CreateContext(command);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
-        // act
-        var actual = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
+        // Act
+        var actual = await dataSource.EnrichCatalogAsync(new ResourceCatalog("/A/B/C"), CancellationToken.None);
 
-        // assert
+        // Assert
         var actualProperties1 = actual.Properties;
         var actualIds = actual.Resources!.Select(resource => resource.Id).ToList();
         var actualUnits = actual.Resources!.Select(resource => resource.Properties?.GetStringValue("unit")).ToList();
@@ -105,7 +105,7 @@ public class RemoteTests
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
-        var catalog = await dataSource.GetCatalogAsync("/A/B/C", CancellationToken.None);
+        var catalog = await dataSource.EnrichCatalogAsync(new ResourceCatalog("/A/B/C"), CancellationToken.None);
         var resource = catalog.Resources![0];
         var representation = resource.Representations![0];
 
@@ -148,7 +148,7 @@ public class RemoteTests
             expectedStatus.AsSpan().Fill((byte)'s');
         }
 
-        var request = new ReadRequest(catalogItem, data, status);
+        var request = new ReadRequest(resource.Id, catalogItem, data, status);
         await dataSource.ReadAsync(begin, end, [request], default!, new Progress<double>(), CancellationToken.None);
         var longData = new CastMemoryManager<byte, long>(data).Memory;
 
@@ -192,7 +192,7 @@ public class RemoteTests
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
-        var catalog = await dataSource.GetCatalogAsync("/D/E/F", CancellationToken.None);
+        var catalog = await dataSource.EnrichCatalogAsync(new ResourceCatalog("/D/E/F"), CancellationToken.None);
         var resource = catalog.Resources![0];
         var representation = resource.Representations![0];
 
@@ -230,7 +230,7 @@ public class RemoteTests
             return Task.CompletedTask;
         }
 
-        var request = new ReadRequest(catalogItem, data, status);
+        var request = new ReadRequest(resource.Id, catalogItem, data, status);
         await dataSource.ReadAsync(begin, end, [request], HandleReadDataAsync, new Progress<double>(), CancellationToken.None);
         var doubleData = new CastMemoryManager<byte, double>(data).Memory;
 

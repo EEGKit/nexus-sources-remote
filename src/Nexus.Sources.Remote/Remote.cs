@@ -4,7 +4,6 @@ using Nexus.Extensibility;
 using System.Buffers;
 using System.Net;
 using System.Reflection;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Nexus.Sources;
@@ -12,7 +11,7 @@ namespace Nexus.Sources;
 [ExtensionDescription(
     "Provides access to remote databases",
     "https://github.com/nexus-main/nexus-sources-remote",
-    "https://github.com/nexus-main/nexus-sources-remote")]
+    "https://github.com/nexus-main/nexus-sources-remote")] 
 public partial class Remote : IDataSource, IDisposable
 {
     #region Fields
@@ -62,55 +61,24 @@ public partial class Remote : IDataSource, IDisposable
         if (mode != "tcp")
             throw new NotSupportedException($"The mode {mode} is not supported.");
 
-        // listen-address
-        var listenAddressString = Context.SourceConfiguration?.GetStringValue("listen-address") ?? "0.0.0.0";
+        // endpoint
+        var endpointString = Context.SourceConfiguration?.GetStringValue("endpoint") ?? "127.0.0.1:56145";
 
-        if (!IPAddress.TryParse(listenAddressString, out var listenAddress))
-            throw new ArgumentException("The listen-address parameter is not a valid IP-Address.");
+        if (!IPEndPoint.TryParse(endpointString, out var endpoint))
+            throw new ArgumentException("The endpoint parameter is not a valid IP Endpoint.");
 
-        // listen-port
-        var listenPortMin = Context.SourceConfiguration?.GetIntValue("listen-port-min") ?? 49152;
-
-        if (!(1 <= listenPortMin && listenPortMin < 65536))
-            throw new ArgumentException("The listen-port-min parameter is invalid.");
-
-        var listenPortMax = Context.SourceConfiguration?.GetIntValue("listen-port-max") ?? 65536;
-
-        if (!(1 <= listenPortMin && listenPortMin < 65536))
-            throw new ArgumentException("The listen-port-max parameter is invalid.");
-
-        // template
-        var templateId = (Context.SourceConfiguration?.GetStringValue("template")) ?? throw new KeyNotFoundException("The template parameter must be provided.");
-
-        // environment variables
-        var requestConfiguration = Context.SourceConfiguration!;
-        var environmentVariables = new Dictionary<string, string>();
-
-        if (requestConfiguration.TryGetValue("environment-variables", out var propertyValue) &&
-            propertyValue.ValueKind == JsonValueKind.Object)
-        {
-            var environmentVariablesRaw = propertyValue.Deserialize<Dictionary<string, JsonElement>>();
-
-            if (environmentVariablesRaw is not null)
-                environmentVariables = environmentVariablesRaw
-                    .Where(entry => entry.Value.ValueKind == JsonValueKind.String)
-                    .ToDictionary(entry => entry.Key, entry => entry.Value.GetString() ?? "");
-        }
-
-        // Build command
-        var actualCommand = BuildCommand(templateId);
+        // type
+        var type = Context.SourceConfiguration?.GetStringValue("type") ?? throw new Exception("The data source type is missing.");
 
         //
-        var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-
         _communicator = new RemoteCommunicator(
-            actualCommand,
-            environmentVariables,
-            listenAddress,
-            listenPortMin,
-            listenPortMax,
+            endpoint,
             HandleReadDataAsync,
-            logger);
+            logger
+        );
+
+        var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+        cancellationToken.Register(() => timeoutTokenSource.Cancel());
 
         _rpcServer = await _communicator.ConnectAsync(timeoutTokenSource.Token);
 
@@ -122,7 +90,7 @@ public partial class Remote : IDataSource, IDisposable
         logger.LogTrace("Set context to remote client");
 
         await _rpcServer
-            .SetContextAsync(context, timeoutTokenSource.Token);
+            .SetContextAsync(type, context, timeoutTokenSource.Token);
 
         logger.LogDebug("Done preparing remote client");
     }
@@ -140,15 +108,15 @@ public partial class Remote : IDataSource, IDisposable
         return response.Registrations;
     }
 
-    public async Task<ResourceCatalog> GetCatalogAsync(
-        string catalogId,
+    public async Task<ResourceCatalog> EnrichCatalogAsync(
+        ResourceCatalog catalog,
         CancellationToken cancellationToken)
     {
         var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
         cancellationToken.Register(() => timeoutTokenSource.Cancel());
 
         var response = await _rpcServer
-            .GetCatalogAsync(catalogId, timeoutTokenSource.Token);
+            .EnrichCatalogAsync(catalog, timeoutTokenSource.Token);
 
         return response.Catalog;
     }
@@ -198,17 +166,17 @@ public partial class Remote : IDataSource, IDisposable
         {
             var counter = 0.0;
 
-            foreach (var (catalogItem, data, status) in requests)
+            foreach (var (originalResourceName, catalogItem, data, status) in requests)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-                cancellationToken.Register(() => timeoutTokenSource.Cancel());
+                cancellationToken.Register(timeoutTokenSource.Cancel);
 
                 var elementCount = data.Length / catalogItem.Representation.ElementSize;
 
                 await _rpcServer
-                    .ReadSingleAsync(begin, end, catalogItem, timeoutTokenSource.Token);
+                    .ReadSingleAsync(begin, end, originalResourceName, catalogItem, timeoutTokenSource.Token);
 
                 await _communicator.ReadRawAsync(data, timeoutTokenSource.Token);
                 await _communicator.ReadRawAsync(status, timeoutTokenSource.Token);
@@ -220,20 +188,6 @@ public partial class Remote : IDataSource, IDisposable
         {
             _readData = null;
         }
-    }
-
-    private string BuildCommand(string templateId)
-    {
-        var template = (Context.SystemConfiguration?
-            .GetStringValue($"{typeof(Remote).FullName}/templates/{templateId}")) ?? throw new Exception($"The template {templateId} does not exist.");
-        var command = CommandRegex().Replace(template, match =>
-        {
-            var parameterKey = match.Groups[1].Value;
-            var parameterValue = (Context.SourceConfiguration?.GetStringValue(parameterKey)) ?? throw new Exception($"The {parameterKey} parameter must be provided.");
-            return parameterValue;
-        });
-
-        return command;
     }
 
     // copy from Nexus -> DataModelUtilities
