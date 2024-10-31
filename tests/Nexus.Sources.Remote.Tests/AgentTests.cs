@@ -19,7 +19,7 @@ public class AgentTests
             SystemConfiguration: default,
             SourceConfiguration: new Dictionary<string, JsonElement>()
             {
-                ["type"] = JsonSerializer.SerializeToElement("Nexus.Sources.Famos")
+                ["type"] = JsonSerializer.SerializeToElement("Nexus.Sources.Remote")
             },
             RequestConfiguration: default
         );

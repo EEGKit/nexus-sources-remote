@@ -11,21 +11,22 @@ using Nexus.Services;
 
 namespace Nexus.Agent;
 
-public class Agent
+internal class Agent
 {
-    private Lock _lock = new();
+    private readonly Lock _lock = new();
 
     private readonly ConcurrentDictionary<Guid, TcpClientPair> _tcpClientPairs = new();
 
-    public async Task RunAsync()
+    private readonly PathsOptions _pathsOptions;
+
+    public Agent(PathsOptions pathsOptions)
     {
-        var extensionHive = await LoadPackagesAsync();
-        await AcceptClientsAsync(extensionHive);
+        _pathsOptions = pathsOptions;
     }
 
-    private async Task<IExtensionHive> LoadPackagesAsync()
+    public async Task<IExtensionHive> LoadPackagesAsync()
     {
-        var pathsOptions = Options.Create(new PathsOptions());
+        var pathsOptions = Options.Create(_pathsOptions);
         var loggerFactory = new LoggerFactory();
 
         var databaseService = new DatabaseService(pathsOptions);
@@ -48,7 +49,7 @@ public class Agent
         return extensionHive;
     }
 
-    private Task AcceptClientsAsync(IExtensionHive extensionHive)
+    public Task AcceptClientsAsync(IExtensionHive extensionHive)
     {
         var tcpListener = new TcpListener(IPAddress.Any, 56145);
         tcpListener.Start();

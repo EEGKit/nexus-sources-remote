@@ -11,7 +11,8 @@
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "NEXUSAGENT_Paths__Config": ".nexus-agent/config"
             }
         }
     ]

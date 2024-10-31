@@ -6,6 +6,9 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder();
 
+var configuration = NexusOptionsBase.BuildConfiguration();
+builder.Configuration.AddConfiguration(configuration);
+
 builder.Services
 
     .AddOpenApi()
@@ -34,6 +37,8 @@ builder.Services
     .AddSingleton<IPackageService, PackageService>()
     .AddSingleton<IExtensionHive, ExtensionHive>();
 
+builder.Services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.Section));
+
 var app = builder.Build();
 
 app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
@@ -41,7 +46,12 @@ app.MapOpenApi();
 app.MapScalarApiReference();
 app.MapControllers();
 
-var agent = new Agent();
-_ = agent.RunAsync();
+var pathsOptions = configuration
+    .GetRequiredSection(PathsOptions.Section)
+    .Get<PathsOptions>() ?? throw new Exception("Unable to instantiate path options");
+
+var agent = new Agent(pathsOptions);
+var extensionHive = await agent.LoadPackagesAsync();
+_ = agent.AcceptClientsAsync(extensionHive);
 
 app.Run();

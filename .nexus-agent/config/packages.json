@@ -1,0 +1,10 @@
+{
+  "c05b592f-e198-472d-9902-3f60cf0a6332": {
+    "Provider": "local",
+    "Configuration": {
+      "path": "tests/Nexus.Sources.Remote.Tests/dotnet",
+      "version": "v1",
+      "csproj": "remote.csproj"
+    }
+  }
+}
