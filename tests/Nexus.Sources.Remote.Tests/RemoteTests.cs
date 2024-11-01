@@ -10,10 +10,10 @@ using Xunit;
 
 namespace Nexus.Sources.Tests;
 
-public class RemoteTests(AgentFixture fixture)
-    : IClassFixture<AgentFixture>
+public class RemoteTests(RemoteTestsFixture fixture)
+    : IClassFixture<RemoteTestsFixture>
 {
-    private readonly AgentFixture _fixture = fixture;
+    private readonly RemoteTestsFixture _fixture = fixture;
 
     [Fact]
     // [Theory]
@@ -264,7 +264,7 @@ public class RemoteTests(AgentFixture fixture)
     private static DataSourceContext CreateContext()
     {
         return new DataSourceContext(
-            ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+            ResourceLocator: new Uri("tcp://127.0.0.1:56145"),
             SystemConfiguration: new Dictionary<string, JsonElement>()
             {
                 [typeof(Remote).FullName!] = JsonSerializer.SerializeToElement(new JsonObject()
@@ -278,6 +278,7 @@ public class RemoteTests(AgentFixture fixture)
             SourceConfiguration: new Dictionary<string, JsonElement>()
             {
                 ["type"] = JsonSerializer.SerializeToElement("Nexus.Sources.DotnetDataSource"),
+                ["resourceLocator"] = JsonSerializer.SerializeToElement("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
                 ["environment-variables"] = JsonSerializer.SerializeToElement(new JsonObject()
                 {
                     ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "src", "remoting", "python-remoting")}"

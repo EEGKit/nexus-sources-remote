@@ -4,6 +4,7 @@ using Nexus.Extensibility;
 using System.Buffers;
 using System.Net;
 using System.Reflection;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Nexus.Sources;
@@ -14,16 +15,12 @@ namespace Nexus.Sources;
     "https://github.com/nexus-main/nexus-sources-remote")] 
 public partial class Remote : IDataSource, IDisposable
 {
-    #region Fields
+    private const int DEFAULT_AGENT_PORT = 56145;
 
     private ReadDataHandler? _readData;
     private static readonly int API_LEVEL = 1;
     private RemoteCommunicator _communicator = default!;
     private IJsonRpcServer _rpcServer = default!;
-
-    #endregion
-
-    #region Properties
 
     /* Possible features to be implemented for this data source:
      * 
@@ -44,10 +41,6 @@ public partial class Remote : IDataSource, IDisposable
 
     private DataSourceContext Context { get; set; } = default!;
 
-    #endregion
-
-    #region Methods
-
     public async Task SetContextAsync(
         DataSourceContext context,
         ILogger logger,
@@ -55,22 +48,40 @@ public partial class Remote : IDataSource, IDisposable
     {
         Context = context;
 
-        // mode
-        var mode = Context.SourceConfiguration?.GetStringValue("mode") ?? "tcp";
+        // Endpoint
+        if (context.ResourceLocator is null || context.ResourceLocator.Scheme != "tcp")
+            throw new ArgumentException("The resource locator parameter URI must be set with the 'tcp' scheme.");
 
-        if (mode != "tcp")
-            throw new NotSupportedException($"The mode {mode} is not supported.");
+        var endpointString = context.ResourceLocator.ToString().Replace("tcp://", "").Replace("/", "");
+        var ipAddress = default(IPAddress);
 
-        // endpoint
-        var endpointString = Context.SourceConfiguration?.GetStringValue("endpoint") ?? "127.0.0.1:56145";
+        if (!IPEndPoint.TryParse(endpointString, out var endpoint) && !IPAddress.TryParse(endpointString, out ipAddress))
+            throw new ArgumentException("The resource locator parameter is not a valid IP endpoint.");
 
-        if (!IPEndPoint.TryParse(endpointString, out var endpoint))
-            throw new ArgumentException("The endpoint parameter is not a valid IP Endpoint.");
+        if (endpoint is null)
+            endpoint = new IPEndPoint(ipAddress!, DEFAULT_AGENT_PORT);
 
-        // type
+        // Type
         var type = Context.SourceConfiguration?.GetStringValue("type") ?? throw new Exception("The data source type is missing.");
 
-        //
+        // Resource locator
+        var resourceLocatorString = Context.SourceConfiguration?.GetStringValue("resourceLocator");
+
+        if (!Uri.TryCreate(resourceLocatorString, UriKind.Absolute, out var resourceLocator))
+            throw new ArgumentException("The resource locator parameter is not a valid URI.");
+
+        // Source configuration
+        var sourceConfigurationJsonElement = Context.SourceConfiguration?.GetValueOrDefault("sourceConfiguration");
+
+        var sourceConfiguration = sourceConfigurationJsonElement.HasValue && sourceConfigurationJsonElement.Value.ValueKind == JsonValueKind.Object
+
+            ? JsonSerializer
+                .Deserialize<IReadOnlyDictionary<string, JsonElement>>(sourceConfigurationJsonElement.Value)
+
+            : JsonSerializer
+                .Deserialize<IReadOnlyDictionary<string, JsonElement>>("{}");
+
+        // Remote communicator
         _communicator = new RemoteCommunicator(
             endpoint,
             HandleReadDataAsync,
@@ -87,12 +98,18 @@ public partial class Remote : IDataSource, IDisposable
         if (apiVersion < 1 || apiVersion > API_LEVEL)
             throw new Exception($"The API level '{apiVersion}' is not supported.");
 
+        // Set context
         logger.LogTrace("Set context to remote client");
 
-        await _rpcServer
-            .SetContextAsync(type, context, timeoutTokenSource.Token);
+        var subContext = new DataSourceContext(
+            resourceLocator,
+            context.SystemConfiguration,
+            sourceConfiguration,
+            context.RequestConfiguration
+        );
 
-        logger.LogDebug("Done preparing remote client");
+        await _rpcServer
+            .SetContextAsync(type, subContext, timeoutTokenSource.Token);
     }
 
     public async Task<CatalogRegistration[]> GetCatalogRegistrationsAsync(
@@ -235,8 +252,6 @@ public partial class Remote : IDataSource, IDisposable
 
         return timeoutToken;
     }
-
-    #endregion
 
     #region IDisposable
 
