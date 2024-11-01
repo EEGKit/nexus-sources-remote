@@ -49,10 +49,6 @@ internal class Logger(NetworkStream commStream) : ILogger
 /// </summary>
 public class RemoteCommunicator
 {
-    private readonly TcpClient _comm;
-
-    private readonly TcpClient _data;
-
     private readonly NetworkStream _commStream;
 
     private readonly NetworkStream _dataStream;
@@ -61,23 +57,22 @@ public class RemoteCommunicator
 
     private ILogger _logger = default!;
 
+    private IDataSource? _dataSource = default;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RemoteCommunicator" />.
     /// </summary>
-    /// <param name="comm">The TCP client for communications.</param>
-    /// <param name="data">The TCP client for data.</param>
+    /// <param name="commStream">The network stream for communications.</param>
+    /// <param name="dataStream">The network stream for data.</param>
     /// <param name="getDataSource">A func to get a new data source instance by its type name.</param>
     public RemoteCommunicator(
-        TcpClient comm, 
-        TcpClient data, 
+        NetworkStream commStream, 
+        NetworkStream dataStream, 
         Func<string, IDataSource> getDataSource
     )
     {
-        _comm = comm;
-        _commStream = comm.GetStream();
-
-        _data = data;
-        _dataStream = data.GetStream();
+        _commStream = commStream;
+        _dataStream = dataStream;
 
         _getDataSource = getDataSource;
     }
@@ -86,7 +81,7 @@ public class RemoteCommunicator
     /// Starts the remoting operation.
     /// </summary>
     /// <returns></returns>
-    public async Task RunAsync()
+    public Task RunAsync()
     {
         static JsonElement Read(Span<byte> jsonRequest)
         {
@@ -94,85 +89,92 @@ public class RemoteCommunicator
             return JsonSerializer.Deserialize<JsonElement>(ref reader, Utilities.Options);
         }
 
-        // loop
-        while (true)
+        /* Make this method async as early as possible to not block the calling method.
+         * Otherwise new clients cannot connect because the call to ReadSize may block
+         * forever, preventing the Lock to be released.
+         */
+        return Task.Run(async () =>
         {
-            // https://www.jsonrpc.org/specification
-
-            // get request message
-            var size = ReadSize(_commStream);
-
-            using var memoryOwner = MemoryPool<byte>.Shared.Rent(size);
-            var messageMemory = memoryOwner.Memory[..size];
-
-            _commStream.ReadExactly(messageMemory.Span, _logger);
-            var request = Read(messageMemory.Span);
-
-            // process message
-            Memory<byte> data = default;
-            Memory<byte> status = default;
-            JsonObject? response;
-
-            if (request.TryGetProperty("jsonrpc", out var element) &&
-                element.ValueKind == JsonValueKind.String &&
-                element.GetString() == "2.0")
+            // loop
+            while (true)
             {
-                if (request.TryGetProperty("id", out var _))
-                {
-                    try
-                    {
-                        (var result, data, status) = await ProcessInvocationAsync(request);
+                // https://www.jsonrpc.org/specification
 
-                        response = new JsonObject()
-                        {
-                            ["result"] = result
-                        };
-                    }
-                    catch (Exception ex)
+                // get request message
+                var size = ReadSize(_commStream);
+
+                using var memoryOwner = MemoryPool<byte>.Shared.Rent(size);
+                var messageMemory = memoryOwner.Memory[..size];
+
+                _commStream.InternalReadExactly(messageMemory.Span);
+                var request = Read(messageMemory.Span);
+
+                // process message
+                Memory<byte> data = default;
+                Memory<byte> status = default;
+                JsonObject? response;
+
+                if (request.TryGetProperty("jsonrpc", out var element) &&
+                    element.ValueKind == JsonValueKind.String &&
+                    element.GetString() == "2.0")
+                {
+                    if (request.TryGetProperty("id", out var _))
                     {
-                        response = new JsonObject()
+                        try
                         {
-                            ["error"] = new JsonObject()
+                            (var result, data, status) = await ProcessInvocationAsync(request);
+
+                            response = new JsonObject()
                             {
-                                ["code"] = -1,
-                                ["message"] = ex.ToString()
-                            }
-                        };
+                                ["result"] = result
+                            };
+                        }
+                        catch (Exception ex)
+                        {
+                            response = new JsonObject()
+                            {
+                                ["error"] = new JsonObject()
+                                {
+                                    ["code"] = -1,
+                                    ["message"] = ex.ToString()
+                                }
+                            };
+                        }
+                    }
+                    else
+                    {
+                        throw new Exception($"JSON-RPC 2.0 notifications are not supported.");
                     }
                 }
                 else
                 {
-                    throw new Exception($"JSON-RPC 2.0 notifications are not supported.");
+                    throw new Exception($"JSON-RPC 2.0 message expected, but got something else.");
+                }
+
+                response.Add("jsonrpc", "2.0");
+
+                string? id;
+
+                if (request.TryGetProperty("id", out var element2))
+                    id = element2.ToString();
+
+                else
+                    throw new Exception("Unable to read the request message id.");
+
+                response.Add("id", id);
+
+                // send response
+                await Utilities.SendToServerAsync(response, _commStream);
+
+                // send data
+                if (!data.Equals(default) && !status.Equals(default))
+                {
+                    await _dataStream.WriteAsync(data);
+                    await _dataStream.WriteAsync(status);
+                    await _dataStream.FlushAsync();
                 }
             }
-            else
-            {
-                throw new Exception($"JSON-RPC 2.0 message expected, but got something else.");
-            }
-
-            response.Add("jsonrpc", "2.0");
-
-            string? id;
-
-            if (request.TryGetProperty("id", out var element2))
-                id = element2.ToString();
-
-            else
-                throw new Exception("Unable to read the request message id.");
-
-            response.Add("id", id);
-
-            // send response
-            await Utilities.SendToServerAsync(response, _commStream);
-
-            // send data
-            if (!data.Equals(default) && !status.Equals(default))
-            {
-                await _dataStream.WriteAsync(data);
-                await _dataStream.WriteAsync(status);
-                await _dataStream.FlushAsync();
-            }
-        }
+        });
     }
 
     private async Task<(JsonObject?, Memory<byte>, Memory<byte>)> ProcessInvocationAsync(JsonElement request)
@@ -182,7 +184,6 @@ public class RemoteCommunicator
         JsonObject? result = default;
         Memory<byte> data = default;
         Memory<byte> status = default;
-        IDataSource? dataSource = default;
 
         var methodName = request.GetProperty("method").GetString();
         var @params = request.GetProperty("params");
@@ -201,7 +202,7 @@ public class RemoteCommunicator
             var rawContext = @params[1];
             var resourceLocator = default(Uri?);
 
-            dataSource = _getDataSource(type);
+            _dataSource = _getDataSource(type);
 
             if (rawContext.TryGetProperty("resourceLocator", out var value))
                 resourceLocator = new Uri(value.GetString()!);
@@ -233,16 +234,16 @@ public class RemoteCommunicator
                 requestConfiguration
             );
 
-            await dataSource.SetContextAsync(context, _logger, CancellationToken.None);
+            await _dataSource.SetContextAsync(context, _logger, CancellationToken.None);
         }
 
         else if (methodName == "getCatalogRegistrations")
         {
-            if (dataSource is null)
+            if (_dataSource is null)
                 throw new Exception("The data source context must be set before invoking other methods.");
 
             var path = @params[0].GetString()!;
-            var registrations = await dataSource.GetCatalogRegistrationsAsync(path, CancellationToken.None);
+            var registrations = await _dataSource.GetCatalogRegistrationsAsync(path, CancellationToken.None);
 
             result = new JsonObject()
             {
@@ -252,11 +253,11 @@ public class RemoteCommunicator
 
         else if (methodName == "enrichCatalog")
         {
-            if (dataSource is null)
+            if (_dataSource is null)
                 throw new Exception("The data source context must be set before invoking other methods.");
 
-            var originalCatalog = JsonSerializer.Deserialize<ResourceCatalog>(@params[0])!;
-            var catalog = await dataSource.EnrichCatalogAsync(originalCatalog, CancellationToken.None);
+            var originalCatalog = JsonSerializer.Deserialize<ResourceCatalog>(@params[0], Utilities.Options)!;
+            var catalog = await _dataSource.EnrichCatalogAsync(originalCatalog, CancellationToken.None);
 
             result = new JsonObject()
             {
@@ -266,11 +267,11 @@ public class RemoteCommunicator
 
         else if (methodName == "getTimeRange")
         {
-            if (dataSource is null)
+            if (_dataSource is null)
                 throw new Exception("The data source context must be set before invoking other methods.");
 
             var catalogId = @params[0].GetString()!;
-            var (begin, end) = await dataSource.GetTimeRangeAsync(catalogId, CancellationToken.None);
+            var (begin, end) = await _dataSource.GetTimeRangeAsync(catalogId, CancellationToken.None);
 
             result = new JsonObject()
             {
@@ -281,7 +282,7 @@ public class RemoteCommunicator
 
         else if (methodName == "getAvailability")
         {
-            if (dataSource is null)
+            if (_dataSource is null)
                 throw new Exception("The data source context must be set before invoking other methods.");
 
             var catalogId = @params[0].GetString()!;
@@ -292,7 +293,7 @@ public class RemoteCommunicator
             var endString = @params[2].GetString()!;
             var end = DateTime.ParseExact(endString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
 
-            var availability = await dataSource.GetAvailabilityAsync(catalogId, begin, end, CancellationToken.None);
+            var availability = await _dataSource.GetAvailabilityAsync(catalogId, begin, end, CancellationToken.None);
 
             result = new JsonObject()
             {
@@ -302,7 +303,7 @@ public class RemoteCommunicator
 
         else if (methodName == "readSingle")
         {
-            if (dataSource is null)
+            if (_dataSource is null)
                 throw new Exception("The data source context must be set before invoking other methods.");
 
             var beginString = @params[0].GetString()!;
@@ -317,7 +318,7 @@ public class RemoteCommunicator
             (data, status) = ExtensibilityUtilities.CreateBuffers(catalogItem.Representation, begin, end);
             var readRequest = new ReadRequest(originalResourceName, catalogItem, data, status);
 
-            await dataSource.ReadAsync(
+            await _dataSource.ReadAsync(
                 begin,
                 end,
                 [readRequest],
@@ -376,13 +377,13 @@ public class RemoteCommunicator
 
         _logger.LogTrace("Try to read {ByteCount} bytes from Nexus", size);
 
-        _dataStream.ReadExactly(MemoryMarshal.AsBytes(buffer.Span), _logger);
+        _dataStream.InternalReadExactly(MemoryMarshal.AsBytes(buffer.Span));
     }
 
     private int ReadSize(NetworkStream currentStream)
     {
         Span<byte> sizeBuffer = stackalloc byte[4];
-        currentStream.ReadExactly(sizeBuffer, _logger);
+        currentStream.InternalReadExactly(sizeBuffer);
         MemoryExtensions.Reverse(sizeBuffer);
 
         var size = BitConverter.ToInt32(sizeBuffer);
@@ -429,17 +430,14 @@ internal static class Utilities
 
 internal static class StreamExtensions
 {
-    public static void ReadExactly(this Stream stream, Span<byte> buffer, ILogger logger)
+    public static void InternalReadExactly(this Stream stream, Span<byte> buffer)
     {
         while (buffer.Length > 0)
         {
             var read = stream.Read(buffer);
 
             if (read == 0)
-            {
-                logger.LogDebug("No data from Nexus received (exiting)");
-                Environment.Exit(0);
-            }
+                throw new Exception("The stream has been closed");
 
             buffer = buffer[read..];
         }

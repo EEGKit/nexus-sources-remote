@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Nexus.Core;
 using Nexus.Extensibility;
@@ -11,7 +10,16 @@ using Nexus.Services;
 
 namespace Nexus.Agent;
 
-internal class Agent
+public class TcpClientPair
+{
+    public NetworkStream? Comm { get; set; }
+
+    public NetworkStream? Data { get; set; }
+
+    public RemoteCommunicator? RemoteCommunicator { get; set; }
+}
+
+internal class AgentService
 {
     private readonly Lock _lock = new();
 
@@ -19,13 +27,24 @@ internal class Agent
 
     private readonly PathsOptions _pathsOptions;
 
-    public Agent(PathsOptions pathsOptions)
+    private readonly ILogger<AgentService> _agentLogger;
+
+    private readonly ILogger<ExtensionHive> _extensionHiveLogger;
+
+    public AgentService(
+        IOptions<PathsOptions> pathsOptions, 
+        ILogger<AgentService> agentLogger,
+        ILogger<ExtensionHive> extensionHiveLogger)
     {
-        _pathsOptions = pathsOptions;
+        _pathsOptions = pathsOptions.Value;
+        _agentLogger = agentLogger;
+        _extensionHiveLogger = extensionHiveLogger;
     }
 
-    public async Task<IExtensionHive> LoadPackagesAsync()
+    public async Task<IExtensionHive> LoadPackagesAsync(CancellationToken cancellationToken)
     {
+        _agentLogger.LogInformation("Load packages");
+
         var pathsOptions = Options.Create(_pathsOptions);
         var loggerFactory = new LoggerFactory();
 
@@ -34,7 +53,8 @@ internal class Agent
 
         var extensionHive = new ExtensionHive(
             pathsOptions, 
-            NullLogger<ExtensionHive>.Instance, loggerFactory
+            _extensionHiveLogger, 
+            loggerFactory
         );
 
         var packageReferenceMap = await packageService.GetAllAsync();
@@ -43,40 +63,45 @@ internal class Agent
         await extensionHive.LoadPackagesAsync(
             packageReferenceMap: packageReferenceMap,
             progress,
-            CancellationToken.None
+            cancellationToken
         );
 
         return extensionHive;
     }
 
-    public Task AcceptClientsAsync(IExtensionHive extensionHive)
+    public Task AcceptClientsAsync(IExtensionHive extensionHive, CancellationToken cancellationToken)
     {
         var tcpListener = new TcpListener(IPAddress.Any, 56145);
         tcpListener.Start();
 
         return Task.Run(async () =>
         {
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                var client = await tcpListener.AcceptTcpClientAsync();
+                var client = await tcpListener.AcceptTcpClientAsync(cancellationToken);
 
                 _ = Task.Run(async () =>
                 {
+                    if (!client.Connected)
+                        throw new Exception("client is not connected");
+
                     var streamReadCts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-                    using var stream = client.GetStream();
+                    var networkStream = client.GetStream(); /* no using because it will close the TCP client */
 
                     // get connection id
                     var buffer1 = new byte[36];
-                    await stream.ReadExactlyAsync(buffer1, streamReadCts.Token);
+                    await networkStream.ReadExactlyAsync(buffer1, streamReadCts.Token);
                     var idString = Encoding.UTF8.GetString(buffer1);
 
                     // get connection type
                     var buffer2 = new byte[4];
-                    await stream.ReadExactlyAsync(buffer2, streamReadCts.Token);
+                    await networkStream.ReadExactlyAsync(buffer2, streamReadCts.Token);
                     var typeString = Encoding.UTF8.GetString(buffer2);
 
                     if (Guid.TryParse(Encoding.UTF8.GetString(buffer1), out var id))
                     {
+                        _agentLogger.LogDebug("Accept TCP client with connection ID {ConnectionId} and communication type {CommunicationType}", idString, typeString);
+
                         var tcpPairCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
                         // Handle the timeout event
@@ -102,11 +127,11 @@ internal class Agent
                         {
                             _tcpClientPairs.AddOrUpdate(
                                 id, 
-                                addValueFactory: id => new TcpClientPair { Comm = client },
+                                addValueFactory: id => new TcpClientPair { Comm = networkStream },
                                 updateValueFactory: (id, pair) => 
                                 {
                                     pair.Comm?.Dispose();
-                                    pair.Comm = client;
+                                    pair.Comm = networkStream;
                                     return pair;
                                 }
                             );
@@ -117,20 +142,20 @@ internal class Agent
                         {
                             _tcpClientPairs.AddOrUpdate(
                                 id, 
-                                addValueFactory: id => new TcpClientPair { Data = client },
+                                addValueFactory: id => new TcpClientPair { Data = networkStream },
                                 updateValueFactory: (id, pair) => 
                                 {
                                     pair.Data?.Dispose();
-                                    pair.Data = client;
+                                    pair.Data = networkStream;
                                     return pair;
                                 }
                             );
                         }
 
-                        // Something went wrong, dispose the client
+                        // Something went wrong, dispose the network stream and return
                         else
                         {
-                            client.Dispose();
+                            networkStream.Dispose();
                             return;
                         }
 
@@ -140,6 +165,8 @@ internal class Agent
                         {
                             if (pair.Comm is not null && pair.Data is not null && pair.RemoteCommunicator is null)
                             {
+                                _agentLogger.LogDebug("Accept remoting client with connection ID {ConnectionId}", id);
+
                                 try
                                 {
                                     pair.RemoteCommunicator = new RemoteCommunicator(
@@ -154,6 +181,8 @@ internal class Agent
                                 {
                                     pair.Comm?.Dispose();
                                     pair.Data?.Dispose();
+
+                                    throw;
                                 }
                             }
                         }
@@ -162,13 +191,4 @@ internal class Agent
             }
         });
     }
-}
-
-public class TcpClientPair
-{
-    public TcpClient? Comm { get; set; }
-
-    public TcpClient? Data { get; set; }
-
-    public RemoteCommunicator? RemoteCommunicator { get; set; }
 }

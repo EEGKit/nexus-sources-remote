@@ -1,3 +1,13 @@
+// TODO
+// - cancellation (RemoteCommunicator.RunAsync)
+// - client logout / timeout
+// - listen to localhost by default, make it configurable
+// - ResourceLocator should be used for Nexus.Sources.Remote only, not for remotely connected sources
+// - Use ResourceLocator variable in SourceConfiguration to derive totally independent Context.
+// - rootless Podman example?
+// - "src/Nexus.Agent" -> "src/agent/dotnet-agent/..."?
+// - check all code ... especially correctness of namespaces of certain files
+
 using Asp.Versioning;
 using Nexus.Agent;
 using Nexus.Core;
@@ -35,7 +45,8 @@ builder.Services
 builder.Services
     .AddSingleton<IDatabaseService, DatabaseService>()
     .AddSingleton<IPackageService, PackageService>()
-    .AddSingleton<IExtensionHive, ExtensionHive>();
+    .AddSingleton<IExtensionHive, ExtensionHive>()
+    .AddSingleton<AgentService>();
 
 builder.Services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.Section));
 
@@ -48,10 +59,14 @@ app.MapControllers();
 
 var pathsOptions = configuration
     .GetRequiredSection(PathsOptions.Section)
-    .Get<PathsOptions>() ?? throw new Exception("Unable to instantiate path options");
+    .Get<PathsOptions>() ?? throw new Exception("Unable to instantiate paths options");
 
-var agent = new Agent(pathsOptions);
-var extensionHive = await agent.LoadPackagesAsync();
-_ = agent.AcceptClientsAsync(extensionHive);
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("Current directory: {CurrentDirectory}", Environment.CurrentDirectory);
+logger.LogInformation("Loading configuration from path: {ConfigFolderPath}", pathsOptions.Config);
+
+var agent = app.Services.GetRequiredService<AgentService>();
+var extensionHive = await agent.LoadPackagesAsync(CancellationToken.None);
+_ = agent.AcceptClientsAsync(extensionHive, CancellationToken.None);
 
 app.Run();

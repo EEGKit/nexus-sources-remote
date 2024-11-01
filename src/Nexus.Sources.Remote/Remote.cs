@@ -78,7 +78,7 @@ public partial class Remote : IDataSource, IDisposable
         );
 
         var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-        cancellationToken.Register(() => timeoutTokenSource.Cancel());
+        cancellationToken.Register(timeoutTokenSource.Cancel);
 
         _rpcServer = await _communicator.ConnectAsync(timeoutTokenSource.Token);
 
@@ -100,7 +100,7 @@ public partial class Remote : IDataSource, IDisposable
         CancellationToken cancellationToken)
     {
         var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-        cancellationToken.Register(() => timeoutTokenSource.Cancel());
+        cancellationToken.Register(timeoutTokenSource.Cancel);
 
         var response = await _rpcServer
             .GetCatalogRegistrationsAsync(path, timeoutTokenSource.Token);
@@ -113,7 +113,7 @@ public partial class Remote : IDataSource, IDisposable
         CancellationToken cancellationToken)
     {
         var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-        cancellationToken.Register(() => timeoutTokenSource.Cancel());
+        cancellationToken.Register(timeoutTokenSource.Cancel);
 
         var response = await _rpcServer
             .EnrichCatalogAsync(catalog, timeoutTokenSource.Token);
@@ -126,7 +126,7 @@ public partial class Remote : IDataSource, IDisposable
         CancellationToken cancellationToken)
     {
         var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-        cancellationToken.Register(() => timeoutTokenSource.Cancel());
+        cancellationToken.Register(timeoutTokenSource.Cancel);
 
         var response = await _rpcServer
             .GetTimeRangeAsync(catalogId, timeoutTokenSource.Token);
@@ -144,7 +144,7 @@ public partial class Remote : IDataSource, IDisposable
         CancellationToken cancellationToken)
     {
         var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-        cancellationToken.Register(() => timeoutTokenSource.Cancel());
+        cancellationToken.Register(timeoutTokenSource.Cancel);
 
         var response = await _rpcServer
             .GetAvailabilityAsync(catalogId, begin, end, timeoutTokenSource.Token);
@@ -210,9 +210,9 @@ public partial class Remote : IDataSource, IDisposable
         if (!match.Success)
             throw new Exception("Invalid resource path");
 
-        var samplePeriod = (TimeSpan)_toSamplePeriodMethodInfo.Invoke(null, new object[] {
+        var samplePeriod = (TimeSpan)_toSamplePeriodMethodInfo.Invoke(null, [
             match.Groups["sample_period"].Value
-        })!;
+        ])!;
 
         // find buffer length and rent buffer
         var length = (int)((end - begin).Ticks / samplePeriod.Ticks);

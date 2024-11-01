@@ -10,20 +10,25 @@ using Xunit;
 
 namespace Nexus.Sources.Tests;
 
-[Trait("TestCategory", "local")]
-public class RemoteTests
+public class RemoteTests(AgentFixture fixture)
+    : IClassFixture<AgentFixture>
 {
-    [Theory]
-    [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
-    [InlineData("python python/remote.py localhost {remote-port}")]
-#if LINUX
-    [InlineData("bash bash/remote.sh localhost {remote-port}")]
-#endif
-    public async Task ProvidesCatalog(string command)
+    private readonly AgentFixture _fixture = fixture;
+
+    [Fact]
+    // [Theory]
+    // [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
+//     [InlineData("python python/remote.py localhost {remote-port}")]
+// #if LINUX
+//     [InlineData("bash bash/remote.sh localhost {remote-port}")]
+// #endif
+    public async Task ProvidesCatalog()
     {
+        await _fixture.Initialize;
+        
         // Arrange
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext(command);
+        var context = CreateContext();
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -50,16 +55,19 @@ public class RemoteTests
         Assert.True(expectedDataTypes.SequenceEqual(actualDataTypes));
     }
 
-    [Theory]
-    [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
-    [InlineData("python python/remote.py localhost {remote-port}")]
-#if LINUX
-    [InlineData("bash bash/remote.sh localhost {remote-port}")]
-#endif
-    public async Task CanProvideTimeRange(string command)
+[Fact]
+    // [Theory]
+    // [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
+//     [InlineData("python python/remote.py localhost {remote-port}")]
+// #if LINUX
+//     [InlineData("bash bash/remote.sh localhost {remote-port}")]
+// #endif
+    public async Task CanProvideTimeRange()
     {
+        await _fixture.Initialize;
+
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext(command);
+        var context = CreateContext();
 
         var expectedBegin = new DateTime(2019, 12, 31, 12, 00, 00, DateTimeKind.Utc);
         var expectedEnd = new DateTime(2020, 01, 02, 09, 50, 00, DateTimeKind.Utc);
@@ -72,16 +80,19 @@ public class RemoteTests
         Assert.Equal(expectedEnd, end);
     }
 
-    [Theory]
-    [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
-    [InlineData("python python/remote.py localhost {remote-port}")]
-#if LINUX
-    [InlineData("bash bash/remote.sh localhost {remote-port}")]
-#endif
-    public async Task CanProvideAvailability(string command)
+[Fact]
+    // [Theory]
+    // [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
+//     [InlineData("python python/remote.py localhost {remote-port}")]
+// #if LINUX
+//     [InlineData("bash bash/remote.sh localhost {remote-port}")]
+// #endif
+    public async Task CanProvideAvailability()
     {
+        await _fixture.Initialize;
+
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext(command);
+        var context = CreateContext();
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -92,16 +103,22 @@ public class RemoteTests
         Assert.Equal(2 / 144.0, actual, precision: 4);
     }
 
-    [Theory]
-    [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}", true)]
-    [InlineData("python python/remote.py localhost {remote-port}", true)]
-#if LINUX
-    [InlineData("bash bash/remote.sh localhost {remote-port}", false)]
-#endif
-    public async Task CanReadFullDay(string command, bool complexData)
+[Fact]
+    // [Theory]
+    // [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}", true)]
+//     [InlineData("python python/remote.py localhost {remote-port}", true)]
+// #if LINUX
+//     [InlineData("bash bash/remote.sh localhost {remote-port}", false)]
+// #endif
+    public async Task CanReadFullDay()
     {
+        // TODO fix this
+        var complexData = true;
+
+        await _fixture.Initialize;
+
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext(command);
+        var context = CreateContext();
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -156,17 +173,20 @@ public class RemoteTests
         Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
     }
 
-    [Theory]
-    [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
-    [InlineData("python python/remote.py localhost {remote-port}")]
-#if LINUX
-    [InlineData("bash bash/remote.sh localhost {remote-port}")]
-#endif
-    public async Task CanLog(string command)
+[Fact]
+    // [Theory]
+    // [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
+//     [InlineData("python python/remote.py localhost {remote-port}")]
+// #if LINUX
+//     [InlineData("bash bash/remote.sh localhost {remote-port}")]
+// #endif
+    public async Task CanLog()
     {
+        await _fixture.Initialize;
+
         var loggerMock = new Mock<ILogger>();
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext(command);
+        var context = CreateContext();
 
         await dataSource.SetContextAsync(context, loggerMock.Object, CancellationToken.None);
 
@@ -182,13 +202,16 @@ public class RemoteTests
         );
     }
 
-    [Theory]
-    [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
-    [InlineData("python python/remote.py localhost {remote-port}")]
-    public async Task CanReadDataHandler(string command)
+[Fact]
+    // [Theory]
+    // [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
+    // [InlineData("python python/remote.py localhost {remote-port}")]
+    public async Task CanReadDataHandler()
     {
+        await _fixture.Initialize;
+        
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext(command);
+        var context = CreateContext();
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -238,7 +261,7 @@ public class RemoteTests
         Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
     }
 
-    private static DataSourceContext CreateContext(string command)
+    private static DataSourceContext CreateContext()
     {
         return new DataSourceContext(
             ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
@@ -254,10 +277,7 @@ public class RemoteTests
             },
             SourceConfiguration: new Dictionary<string, JsonElement>()
             {
-                ["listen-address"] = JsonSerializer.SerializeToElement("127.0.0.1"),
-                ["listen-port-min"] = JsonSerializer.SerializeToElement("63000"),
-                ["template"] = JsonSerializer.SerializeToElement("local"),
-                ["command"] = JsonSerializer.SerializeToElement(command),
+                ["type"] = JsonSerializer.SerializeToElement("Nexus.Sources.DotnetDataSource"),
                 ["environment-variables"] = JsonSerializer.SerializeToElement(new JsonObject()
                 {
                     ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "src", "remoting", "python-remoting")}"

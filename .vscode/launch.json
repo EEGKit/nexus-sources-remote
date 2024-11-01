@@ -8,11 +8,11 @@
             "preLaunchTask": "build-nexus-agent",
             "program": "${workspaceFolder}/artifacts/bin/Nexus.Agent/debug/Nexus.Agent.dll",
             "args": [],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/src/Nexus.Agent",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "NEXUSAGENT_Paths__Config": ".nexus-agent/config"
+                "NEXUSAGENT_Paths__Config": "../../.nexus-agent/config"
             }
         }
     ]
