@@ -5,8 +5,8 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Nexus.Core;
 using Nexus.Extensibility;
+using Nexus.PackageManagement.Services;
 using Nexus.Remoting;
-using Nexus.Services;
 
 namespace Nexus.Agent;
 
@@ -25,51 +25,45 @@ internal class AgentService
 
     private readonly ConcurrentDictionary<Guid, TcpClientPair> _tcpClientPairs = new();
 
+    private readonly IExtensionHive _extensionHive;
+
+    private readonly IPackageService _packageService;
+
     private readonly PathsOptions _pathsOptions;
 
     private readonly ILogger<AgentService> _agentLogger;
 
-    private readonly ILogger<ExtensionHive> _extensionHiveLogger;
+    private readonly ILogger<IExtensionHive> _extensionHiveLogger;
 
     public AgentService(
+        IExtensionHive extensionHive,
+        IPackageService packageService,
         IOptions<PathsOptions> pathsOptions, 
         ILogger<AgentService> agentLogger,
-        ILogger<ExtensionHive> extensionHiveLogger)
+        ILogger<IExtensionHive> extensionHiveLogger)
     {
+        _extensionHive = extensionHive;
+        _packageService = packageService;
         _pathsOptions = pathsOptions.Value;
         _agentLogger = agentLogger;
         _extensionHiveLogger = extensionHiveLogger;
     }
 
-    public async Task<IExtensionHive> LoadPackagesAsync(CancellationToken cancellationToken)
+    public async Task LoadPackagesAsync(CancellationToken cancellationToken)
     {
         _agentLogger.LogInformation("Load packages");
 
-        var pathsOptions = Options.Create(_pathsOptions);
-        var loggerFactory = new LoggerFactory();
-
-        var databaseService = new DatabaseService(pathsOptions);
-        var packageService = new PackageService(databaseService);
-
-        var extensionHive = new ExtensionHive(
-            pathsOptions, 
-            _extensionHiveLogger, 
-            loggerFactory
-        );
-
-        var packageReferenceMap = await packageService.GetAllAsync();
+        var packageReferenceMap = await _packageService.GetAllAsync();
         var progress = new Progress<double>();
 
-        await extensionHive.LoadPackagesAsync(
+        await _extensionHive.LoadPackagesAsync(
             packageReferenceMap: packageReferenceMap,
             progress,
             cancellationToken
         );
-
-        return extensionHive;
     }
 
-    public Task AcceptClientsAsync(IExtensionHive extensionHive, CancellationToken cancellationToken)
+    public Task AcceptClientsAsync(CancellationToken cancellationToken)
     {
         var tcpListener = new TcpListener(IPAddress.Any, 56145);
         tcpListener.Start();
@@ -172,7 +166,7 @@ internal class AgentService
                                     pair.RemoteCommunicator = new RemoteCommunicator(
                                         pair.Comm,
                                         pair.Data,
-                                        getDataSource: type => extensionHive.GetInstance<IDataSource>(type)
+                                        getDataSource: type => _extensionHive.GetInstance<IDataSource>(type)
                                     );
 
                                     _ = pair.RemoteCommunicator.RunAsync();

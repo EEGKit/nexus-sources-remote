@@ -3,8 +3,8 @@
 
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
-using Nexus.Core.V1;
-using Nexus.Services;
+using Nexus.PackageManagement.Services;
+using Nexus.PackageManagement;
 
 namespace Nexus.Controllers;
 
@@ -32,9 +32,9 @@ internal class PackageReferencesController(
     /// </summary>
     /// <returns></returns>
     [HttpGet]
-    public async Task<IReadOnlyDictionary<Guid, PackageReference>> GetAsync()
+    public Task<IReadOnlyDictionary<Guid, PackageReference>> GetAsync()
     {
-        return await _packageService.GetAllAsync();
+        return _packageService.GetAllAsync();
     }
 
     /// <summary>

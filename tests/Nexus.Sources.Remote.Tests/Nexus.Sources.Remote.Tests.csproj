@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="dotnet\remote.cs" />
+    <Compile Remove="dotnet/remote.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Nexus.Sources.Remote\Nexus.Sources.Remote.csproj" />
+    <ProjectReference Include="../../src/Nexus.Sources.Remote/Nexus.Sources.Remote.csproj" />
   </ItemGroup>
 
   <ItemGroup>

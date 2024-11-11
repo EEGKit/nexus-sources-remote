@@ -26,7 +26,7 @@ internal abstract record NexusOptionsBase()
     }
 }
 
-internal record PathsOptions
+internal record PathsOptions : IPackageManagementPathsOptions
 {
     public const string Section = "Paths";
 
