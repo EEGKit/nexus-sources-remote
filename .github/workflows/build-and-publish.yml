@@ -9,6 +9,10 @@ on:
     tags:
       - '*'
 
+  pull_request:
+    branches:
+      - dev
+
 jobs:
 
   build:
@@ -36,41 +40,54 @@ jobs:
         if: ${{ env.IS_RELEASE == 'true' }}
         run: python build/create_tag_body.py
 
-      - name: Set up Python 
-        uses: actions/setup-python@v3
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@v4
         with:
-          python-version: '3.9'
+          dotnet-version: "9.0.x"
+          dotnet-quality: "preview"
 
-      - name: Install
-        run: |
-          sudo apt install jq
-          npm install -g pyright
-          python -m pip install build wheel pytest pytest-asyncio
-          python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ nexus-extensibility
+      # - name: Set up Python 
+      #   uses: actions/setup-python@v3
+      #   with:
+      #     python-version: '3.9'
 
-      - name: Prepare
-        run: |
-         chmod +x tests/Nexus.Sources.Remote.Tests/bash/remote.sh
+      - name: Create Docker Output Folder
+        run: mkdir --parent artifacts/images
+
+      # - name: Install
+      #   run: |
+      #     npm install -g pyright
+      #     python -m pip install build wheel pytest pytest-asyncio
+      #     python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ nexus-extensibility
+
+      - name: Docker Setup
+        id: buildx
+        uses: docker/setup-buildx-action@v1
 
       - name: Build
         run: |
-          dotnet build -c Release /p:GeneratePackage=true src/remoting/dotnet-remoting/dotnet-remoting.csproj
-          python -m build --wheel --outdir artifacts/package --no-isolation src/remoting/python-remoting
+          dotnet publish -c Release -o app /p:GeneratePackage=true src/Nexus.Agent/Nexus.Agent.csproj
+          # python -m build --wheel --outdir artifacts/package --no-isolation src/remoting/python-remoting
 
       - name: Test
         run: |
-          dotnet test -c Release --filter TestCategory=local
-          pyright
-          pytest
-          sudo bash tests/Nexus.Sources.Remote.Tests/SetupDockerTests.sh
+          dotnet test -c Release
+          # pyright
+          # pytest
+
+      - name: Docker Build
+        run: |
+          docker build -t nexus-main/nexus-agent:v_next .
+          docker save --output artifacts/images/nexus_agent_image.tar nexus-main/nexus-agent:v_next
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: artifacts
           path: |
-            artifacts/tag_body.txt
+            artifacts/*.txt
             artifacts/package/
+            artifacts/images/
 
     outputs:
       is_release: ${{ env.IS_RELEASE }}
@@ -98,11 +115,11 @@ jobs:
         env:
           MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
 
-      # GitHub Package Registry does not support Python packages: https://github.community/t/pypi-compatible-github-package-registry/14615
-      - name: Python package (MyGet)
-        run: 'for filePath in artifacts/package/*.whl; do curl -k -X POST https://www.myget.org/F/apollo3zehn-dev/python/upload -H "Authorization: Bearer ${MYGET_API_KEY}" -F "data=@$filePath"; done'
-        env:
-          MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
+      # # GitHub Package Registry does not support Python packages: https://github.community/t/pypi-compatible-github-package-registry/14615
+      # - name: Python package (MyGet)
+      #   run: 'for filePath in artifacts/package/*.whl; do curl -k -X POST https://www.myget.org/F/apollo3zehn-dev/python/upload -H "Authorization: Bearer ${MYGET_API_KEY}" -F "data=@$filePath"; done'
+      #   env:
+      #     MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
 
   publish_release:
 

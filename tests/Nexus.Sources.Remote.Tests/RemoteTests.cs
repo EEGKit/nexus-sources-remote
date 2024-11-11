@@ -16,12 +16,6 @@ public class RemoteTests(RemoteTestsFixture fixture)
     private readonly RemoteTestsFixture _fixture = fixture;
 
     [Fact]
-    // [Theory]
-    // [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
-//     [InlineData("python python/remote.py localhost {remote-port}")]
-// #if LINUX
-//     [InlineData("bash bash/remote.sh localhost {remote-port}")]
-// #endif
     public async Task ProvidesCatalog()
     {
         await _fixture.Initialize;
@@ -56,12 +50,6 @@ public class RemoteTests(RemoteTestsFixture fixture)
     }
 
 [Fact]
-    // [Theory]
-    // [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
-//     [InlineData("python python/remote.py localhost {remote-port}")]
-// #if LINUX
-//     [InlineData("bash bash/remote.sh localhost {remote-port}")]
-// #endif
     public async Task CanProvideTimeRange()
     {
         await _fixture.Initialize;
@@ -81,12 +69,6 @@ public class RemoteTests(RemoteTestsFixture fixture)
     }
 
 [Fact]
-    // [Theory]
-    // [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
-//     [InlineData("python python/remote.py localhost {remote-port}")]
-// #if LINUX
-//     [InlineData("bash bash/remote.sh localhost {remote-port}")]
-// #endif
     public async Task CanProvideAvailability()
     {
         await _fixture.Initialize;
@@ -104,12 +86,6 @@ public class RemoteTests(RemoteTestsFixture fixture)
     }
 
 [Fact]
-    // [Theory]
-    // [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}", true)]
-//     [InlineData("python python/remote.py localhost {remote-port}", true)]
-// #if LINUX
-//     [InlineData("bash bash/remote.sh localhost {remote-port}", false)]
-// #endif
     public async Task CanReadFullDay()
     {
         // TODO fix this
@@ -174,12 +150,6 @@ public class RemoteTests(RemoteTestsFixture fixture)
     }
 
 [Fact]
-    // [Theory]
-    // [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
-//     [InlineData("python python/remote.py localhost {remote-port}")]
-// #if LINUX
-//     [InlineData("bash bash/remote.sh localhost {remote-port}")]
-// #endif
     public async Task CanLog()
     {
         await _fixture.Initialize;
@@ -203,9 +173,6 @@ public class RemoteTests(RemoteTestsFixture fixture)
     }
 
 [Fact]
-    // [Theory]
-    // [InlineData("dotnet run --project ../../../../tests/Nexus.Sources.Remote.Tests/dotnet/remote.csproj localhost {remote-port}")]
-    // [InlineData("python python/remote.py localhost {remote-port}")]
     public async Task CanReadDataHandler()
     {
         await _fixture.Initialize;
