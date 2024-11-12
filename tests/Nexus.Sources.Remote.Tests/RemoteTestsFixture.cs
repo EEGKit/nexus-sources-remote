@@ -93,7 +93,7 @@ public class RemoteTestsFixture : IDisposable
 
             _runProcess.ErrorDataReceived += (sender, e) =>
             {
-                File.AppendAllText("/home/vincent/Downloads/error.txt", e.Data + Environment.NewLine);
+                // File.AppendAllText("/home/vincent/Downloads/error.txt", e.Data + Environment.NewLine);
 
                 _success = false;
                 _semaphoreRun.Release();
