@@ -4,6 +4,7 @@
 // - listen to localhost by default, make it configurable
 // - rootless Podman example?
 // - "src/Nexus.Agent" -> "src/agent/dotnet-agent/..."?
+// - Podman container tests (or remove container and just provide build script = Dockerfile?)
 
 using Asp.Versioning;
 using Microsoft.Extensions.Options;
