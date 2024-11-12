@@ -76,7 +76,7 @@ jobs:
 
       - name: Docker Build
         run: |
-          docker build -t nexus-main/nexus-agent:v_next .
+          docker build -t nexus-main/nexus-agent:v_next -f src/Nexus.Agent/Dockerfile .
           docker save --output artifacts/images/nexus_agent_image.tar nexus-main/nexus-agent:v_next
 
       - name: Upload Artifacts
