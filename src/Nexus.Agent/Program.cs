@@ -4,9 +4,9 @@
 // - listen to localhost by default, make it configurable
 // - rootless Podman example?
 // - "src/Nexus.Agent" -> "src/agent/dotnet-agent/..."?
-// - check all code ... especially correctness of namespaces of certain files
 
 using Asp.Versioning;
+using Microsoft.Extensions.Options;
 using Nexus.Agent;
 using Nexus.Core;
 using Nexus.PackageManagement.Core;
@@ -47,7 +47,9 @@ builder.Services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.S
 
 // Package management
 builder.Services.AddPackageManagement();
-builder.Services.Configure<IPackageManagementPathsOptions>(x => configuration.GetSection(PathsOptions.Section).Bind(new PathsOptions()));
+
+builder.Services.AddSingleton<IPackageManagementPathsOptions>(
+    serviceProvider => serviceProvider.GetRequiredService<IOptions<PathsOptions>>().Value);
 
 var app = builder.Build();
 
@@ -56,13 +58,11 @@ app.MapOpenApi();
 app.MapScalarApiReference();
 app.MapControllers();
 
-var pathsOptions = configuration
-    .GetRequiredSection(PathsOptions.Section)
-    .Get<PathsOptions>() ?? throw new Exception("Unable to instantiate paths options");
+var pathsOptions = app.Services.GetRequiredService<IOptions<PathsOptions>>();
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("Current directory: {CurrentDirectory}", Environment.CurrentDirectory);
-logger.LogInformation("Loading configuration from path: {ConfigFolderPath}", pathsOptions.Config);
+logger.LogInformation("Loading configuration from path: {ConfigFolderPath}", pathsOptions.Value.Config);
 
 var agent = app.Services.GetRequiredService<AgentService>();
 await agent.LoadPackagesAsync(CancellationToken.None);

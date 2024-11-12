@@ -2,8 +2,6 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Microsoft.Extensions.Options;
-using Nexus.Core;
 using Nexus.Extensibility;
 using Nexus.PackageManagement.Services;
 using Nexus.Remoting;
@@ -29,24 +27,16 @@ internal class AgentService
 
     private readonly IPackageService _packageService;
 
-    private readonly PathsOptions _pathsOptions;
-
     private readonly ILogger<AgentService> _agentLogger;
-
-    private readonly ILogger<IExtensionHive> _extensionHiveLogger;
 
     public AgentService(
         IExtensionHive extensionHive,
         IPackageService packageService,
-        IOptions<PathsOptions> pathsOptions, 
-        ILogger<AgentService> agentLogger,
-        ILogger<IExtensionHive> extensionHiveLogger)
+        ILogger<AgentService> agentLogger)
     {
         _extensionHive = extensionHive;
         _packageService = packageService;
-        _pathsOptions = pathsOptions.Value;
         _agentLogger = agentLogger;
-        _extensionHiveLogger = extensionHiveLogger;
     }
 
     public async Task LoadPackagesAsync(CancellationToken cancellationToken)
