@@ -15,7 +15,7 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder();
 
-var configuration = NexusOptionsBase.BuildConfiguration();
+var configuration = NexusAgentOptions.BuildConfiguration();
 builder.Configuration.AddConfiguration(configuration);
 
 builder.Services

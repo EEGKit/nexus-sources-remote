@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Nexus.Core;
 
-internal abstract record NexusOptionsBase()
+internal abstract record NexusAgentOptions()
 {
     // for testing only
     public string? BlindSample { get; set; }
