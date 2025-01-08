@@ -245,11 +245,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
             SourceConfiguration: new Dictionary<string, JsonElement>()
             {
                 ["type"] = JsonSerializer.SerializeToElement("Nexus.Sources.DotnetDataSource"),
-                ["resourceLocator"] = JsonSerializer.SerializeToElement("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
-                ["environment-variables"] = JsonSerializer.SerializeToElement(new JsonObject()
-                {
-                    ["PYTHONPATH"] = $"{Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "src", "remoting", "python-remoting")}"
-                })
+                ["resourceLocator"] = JsonSerializer.SerializeToElement("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA"))
             },
             RequestConfiguration: default
         );
