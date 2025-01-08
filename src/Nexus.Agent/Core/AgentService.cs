@@ -70,7 +70,7 @@ internal class AgentService
                         throw new Exception("client is not connected");
 
                     var streamReadCts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-                    var networkStream = client.GetStream(); /* no using because it will close the TCP client */
+                    var networkStream = client.GetStream(); /* no using because it would close the TCP client */
 
                     // get connection id
                     var buffer1 = new byte[36];

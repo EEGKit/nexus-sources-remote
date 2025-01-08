@@ -1,3 +1,7 @@
+# TODO: this README needs to be updated
+
+Port 56145 will be used for RPC comms.
+
 # Nexus Remote Data Source
 
 [![GitHub Actions](https://github.com/nexus-main/nexus-sources-remote/actions/workflows/build-and-publish.yml/badge.svg?branch=master)](https://github.com/nexus-main/nexus-sources-remote/actions)

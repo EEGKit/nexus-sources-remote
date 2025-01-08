@@ -5,6 +5,7 @@
 // - "src/Nexus.Agent" -> "src/agent/dotnet-agent/..."?
 // - Podman container tests (or remove container and just provide build script = Dockerfile?)
 // - use nginx basic auth to protect page? Or using a token provided by ENV variable?
+// - update README
 
 using Asp.Versioning;
 using Microsoft.Extensions.Options;
