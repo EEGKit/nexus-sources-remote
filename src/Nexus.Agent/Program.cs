@@ -2,9 +2,9 @@
 // - cancellation (RemoteCommunicator.RunAsync)
 // - client logout / timeout
 // - listen to localhost by default, make it configurable
-// - rootless Podman example?
 // - "src/Nexus.Agent" -> "src/agent/dotnet-agent/..."?
 // - Podman container tests (or remove container and just provide build script = Dockerfile?)
+// - use nginx basic auth to protect page? Or using a token provided by ENV variable?
 
 using Asp.Versioning;
 using Microsoft.Extensions.Options;
