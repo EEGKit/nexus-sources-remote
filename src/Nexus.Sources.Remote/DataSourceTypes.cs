@@ -12,13 +12,13 @@ internal interface IJsonRpcServer
         GetApiVersionAsync(CancellationToken cancellationToken);
 
     public Task
-        SetContextAsync(DataSourceContext context, CancellationToken cancellationToken);
+        SetContextAsync(string type, DataSourceContext context, CancellationToken cancellationToken);
 
     public Task<CatalogRegistrationsResponse>
         GetCatalogRegistrationsAsync(string path, CancellationToken cancellationToken);
 
     public Task<CatalogResponse>
-        GetCatalogAsync(string catalogId, CancellationToken cancellationToken);
+        EnrichCatalogAsync(ResourceCatalog catalog, CancellationToken cancellationToken);
 
     public Task<TimeRangeResponse>
         GetTimeRangeAsync(string catalogId, CancellationToken cancellationToken);
@@ -27,7 +27,7 @@ internal interface IJsonRpcServer
         GetAvailabilityAsync(string catalogId, DateTime begin, DateTime end, CancellationToken cancellationToken);
 
     public Task
-        ReadSingleAsync(DateTime begin, DateTime end, CatalogItem catalogItem, CancellationToken cancellationToken);
+        ReadSingleAsync(DateTime begin, DateTime end, string originalResourceName, CatalogItem catalogItem, CancellationToken cancellationToken);
 }
 
 internal record ApiVersionResponse(int ApiVersion);
@@ -54,7 +54,12 @@ internal class JsonElementConverter : Newtonsoft.Json.JsonConverter
         return canConvert;
     }
 
-    public override object? ReadJson(Newtonsoft.Json.JsonReader reader, Type objectType, object? existingValue, Newtonsoft.Json.JsonSerializer serializer)
+    public override object? ReadJson(
+        Newtonsoft.Json.JsonReader reader, 
+        Type objectType, 
+        object? existingValue, 
+        Newtonsoft.Json.JsonSerializer serializer
+    )
     {
         if (reader.TokenType == Newtonsoft.Json.JsonToken.Null)
             return default;

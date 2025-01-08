@@ -26,7 +26,7 @@ public class PipeVsTcp
         {
             Arguments = $"{assemblyPath} pipe",
             UseShellExecute = false,
-            RedirectStandardInput = true,
+            RedirectStandardInput = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };

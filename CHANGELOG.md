@@ -1,3 +1,7 @@
+## v2.0.0-beta.39 - 2025-01-08
+
+- Release Nexus.Agent.
+
 ## v2.0.0-beta.24 - 2024-03-15
 
 - Follow Nexus changes.

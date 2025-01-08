@@ -12,19 +12,15 @@ namespace Nexus.Sources;
 [ExtensionDescription(
     "Provides access to remote databases",
     "https://github.com/nexus-main/nexus-sources-remote",
-    "https://github.com/nexus-main/nexus-sources-remote")]
+    "https://github.com/nexus-main/nexus-sources-remote")] 
 public partial class Remote : IDataSource, IDisposable
 {
-    #region Fields
+    private const int DEFAULT_AGENT_PORT = 56145;
 
     private ReadDataHandler? _readData;
     private static readonly int API_LEVEL = 1;
     private RemoteCommunicator _communicator = default!;
     private IJsonRpcServer _rpcServer = default!;
-
-    #endregion
-
-    #region Properties
 
     /* Possible features to be implemented for this data source:
      * 
@@ -45,10 +41,6 @@ public partial class Remote : IDataSource, IDisposable
 
     private DataSourceContext Context { get; set; } = default!;
 
-    #endregion
-
-    #region Methods
-
     public async Task SetContextAsync(
         DataSourceContext context,
         ILogger logger,
@@ -56,61 +48,48 @@ public partial class Remote : IDataSource, IDisposable
     {
         Context = context;
 
-        // mode
-        var mode = Context.SourceConfiguration?.GetStringValue("mode") ?? "tcp";
+        // Endpoint
+        if (context.ResourceLocator is null || context.ResourceLocator.Scheme != "tcp")
+            throw new ArgumentException("The resource locator parameter URI must be set with the 'tcp' scheme.");
 
-        if (mode != "tcp")
-            throw new NotSupportedException($"The mode {mode} is not supported.");
+        var endpointString = context.ResourceLocator.ToString().Replace("tcp://", "").Replace("/", "");
+        var ipAddress = default(IPAddress);
 
-        // listen-address
-        var listenAddressString = Context.SourceConfiguration?.GetStringValue("listen-address") ?? "0.0.0.0";
+        if (!IPEndPoint.TryParse(endpointString, out var endpoint) && !IPAddress.TryParse(endpointString, out ipAddress))
+            throw new ArgumentException("The resource locator parameter is not a valid IP endpoint.");
 
-        if (!IPAddress.TryParse(listenAddressString, out var listenAddress))
-            throw new ArgumentException("The listen-address parameter is not a valid IP-Address.");
+        if (endpoint is null)
+            endpoint = new IPEndPoint(ipAddress!, DEFAULT_AGENT_PORT);
 
-        // listen-port
-        var listenPortMin = Context.SourceConfiguration?.GetIntValue("listen-port-min") ?? 49152;
+        // Type
+        var type = Context.SourceConfiguration?.GetStringValue("type") ?? throw new Exception("The data source type is missing.");
 
-        if (!(1 <= listenPortMin && listenPortMin < 65536))
-            throw new ArgumentException("The listen-port-min parameter is invalid.");
+        // Resource locator
+        var resourceLocatorString = Context.SourceConfiguration?.GetStringValue("resourceLocator");
 
-        var listenPortMax = Context.SourceConfiguration?.GetIntValue("listen-port-max") ?? 65536;
+        if (!Uri.TryCreate(resourceLocatorString, UriKind.Absolute, out var resourceLocator))
+            throw new ArgumentException("The resource locator parameter is not a valid URI.");
 
-        if (!(1 <= listenPortMin && listenPortMin < 65536))
-            throw new ArgumentException("The listen-port-max parameter is invalid.");
+        // Source configuration
+        var sourceConfigurationJsonElement = Context.SourceConfiguration?.GetValueOrDefault("sourceConfiguration");
 
-        // template
-        var templateId = (Context.SourceConfiguration?.GetStringValue("template")) ?? throw new KeyNotFoundException("The template parameter must be provided.");
+        var sourceConfiguration = sourceConfigurationJsonElement.HasValue && sourceConfigurationJsonElement.Value.ValueKind == JsonValueKind.Object
 
-        // environment variables
-        var requestConfiguration = Context.SourceConfiguration!;
-        var environmentVariables = new Dictionary<string, string>();
+            ? JsonSerializer
+                .Deserialize<IReadOnlyDictionary<string, JsonElement>>(sourceConfigurationJsonElement.Value)
 
-        if (requestConfiguration.TryGetValue("environment-variables", out var propertyValue) &&
-            propertyValue.ValueKind == JsonValueKind.Object)
-        {
-            var environmentVariablesRaw = propertyValue.Deserialize<Dictionary<string, JsonElement>>();
+            : JsonSerializer
+                .Deserialize<IReadOnlyDictionary<string, JsonElement>>("{}");
 
-            if (environmentVariablesRaw is not null)
-                environmentVariables = environmentVariablesRaw
-                    .Where(entry => entry.Value.ValueKind == JsonValueKind.String)
-                    .ToDictionary(entry => entry.Key, entry => entry.Value.GetString() ?? "");
-        }
-
-        // Build command
-        var actualCommand = BuildCommand(templateId);
-
-        //
-        var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-
+        // Remote communicator
         _communicator = new RemoteCommunicator(
-            actualCommand,
-            environmentVariables,
-            listenAddress,
-            listenPortMin,
-            listenPortMax,
+            endpoint,
             HandleReadDataAsync,
-            logger);
+            logger
+        );
+
+        var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+        cancellationToken.Register(timeoutTokenSource.Cancel);
 
         _rpcServer = await _communicator.ConnectAsync(timeoutTokenSource.Token);
 
@@ -119,12 +98,18 @@ public partial class Remote : IDataSource, IDisposable
         if (apiVersion < 1 || apiVersion > API_LEVEL)
             throw new Exception($"The API level '{apiVersion}' is not supported.");
 
+        // Set context
         logger.LogTrace("Set context to remote client");
 
-        await _rpcServer
-            .SetContextAsync(context, timeoutTokenSource.Token);
+        var subContext = new DataSourceContext(
+            resourceLocator,
+            context.SystemConfiguration,
+            sourceConfiguration,
+            context.RequestConfiguration
+        );
 
-        logger.LogDebug("Done preparing remote client");
+        await _rpcServer
+            .SetContextAsync(type, subContext, timeoutTokenSource.Token);
     }
 
     public async Task<CatalogRegistration[]> GetCatalogRegistrationsAsync(
@@ -132,7 +117,7 @@ public partial class Remote : IDataSource, IDisposable
         CancellationToken cancellationToken)
     {
         var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-        cancellationToken.Register(() => timeoutTokenSource.Cancel());
+        cancellationToken.Register(timeoutTokenSource.Cancel);
 
         var response = await _rpcServer
             .GetCatalogRegistrationsAsync(path, timeoutTokenSource.Token);
@@ -140,15 +125,15 @@ public partial class Remote : IDataSource, IDisposable
         return response.Registrations;
     }
 
-    public async Task<ResourceCatalog> GetCatalogAsync(
-        string catalogId,
+    public async Task<ResourceCatalog> EnrichCatalogAsync(
+        ResourceCatalog catalog,
         CancellationToken cancellationToken)
     {
         var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-        cancellationToken.Register(() => timeoutTokenSource.Cancel());
+        cancellationToken.Register(timeoutTokenSource.Cancel);
 
         var response = await _rpcServer
-            .GetCatalogAsync(catalogId, timeoutTokenSource.Token);
+            .EnrichCatalogAsync(catalog, timeoutTokenSource.Token);
 
         return response.Catalog;
     }
@@ -158,7 +143,7 @@ public partial class Remote : IDataSource, IDisposable
         CancellationToken cancellationToken)
     {
         var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-        cancellationToken.Register(() => timeoutTokenSource.Cancel());
+        cancellationToken.Register(timeoutTokenSource.Cancel);
 
         var response = await _rpcServer
             .GetTimeRangeAsync(catalogId, timeoutTokenSource.Token);
@@ -176,7 +161,7 @@ public partial class Remote : IDataSource, IDisposable
         CancellationToken cancellationToken)
     {
         var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-        cancellationToken.Register(() => timeoutTokenSource.Cancel());
+        cancellationToken.Register(timeoutTokenSource.Cancel);
 
         var response = await _rpcServer
             .GetAvailabilityAsync(catalogId, begin, end, timeoutTokenSource.Token);
@@ -198,17 +183,17 @@ public partial class Remote : IDataSource, IDisposable
         {
             var counter = 0.0;
 
-            foreach (var (catalogItem, data, status) in requests)
+            foreach (var (originalResourceName, catalogItem, data, status) in requests)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-                cancellationToken.Register(() => timeoutTokenSource.Cancel());
+                cancellationToken.Register(timeoutTokenSource.Cancel);
 
                 var elementCount = data.Length / catalogItem.Representation.ElementSize;
 
                 await _rpcServer
-                    .ReadSingleAsync(begin, end, catalogItem, timeoutTokenSource.Token);
+                    .ReadSingleAsync(begin, end, originalResourceName, catalogItem, timeoutTokenSource.Token);
 
                 await _communicator.ReadRawAsync(data, timeoutTokenSource.Token);
                 await _communicator.ReadRawAsync(status, timeoutTokenSource.Token);
@@ -220,20 +205,6 @@ public partial class Remote : IDataSource, IDisposable
         {
             _readData = null;
         }
-    }
-
-    private string BuildCommand(string templateId)
-    {
-        var template = (Context.SystemConfiguration?
-            .GetStringValue($"{typeof(Remote).FullName}/templates/{templateId}")) ?? throw new Exception($"The template {templateId} does not exist.");
-        var command = CommandRegex().Replace(template, match =>
-        {
-            var parameterKey = match.Groups[1].Value;
-            var parameterValue = (Context.SourceConfiguration?.GetStringValue(parameterKey)) ?? throw new Exception($"The {parameterKey} parameter must be provided.");
-            return parameterValue;
-        });
-
-        return command;
     }
 
     // copy from Nexus -> DataModelUtilities
@@ -256,9 +227,9 @@ public partial class Remote : IDataSource, IDisposable
         if (!match.Success)
             throw new Exception("Invalid resource path");
 
-        var samplePeriod = (TimeSpan)_toSamplePeriodMethodInfo.Invoke(null, new object[] {
+        var samplePeriod = (TimeSpan)_toSamplePeriodMethodInfo.Invoke(null, [
             match.Groups["sample_period"].Value
-        })!;
+        ])!;
 
         // find buffer length and rent buffer
         var length = (int)((end - begin).Ticks / samplePeriod.Ticks);
@@ -281,8 +252,6 @@ public partial class Remote : IDataSource, IDisposable
 
         return timeoutToken;
     }
-
-    #endregion
 
     #region IDisposable
 

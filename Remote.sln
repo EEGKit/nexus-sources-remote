@@ -19,6 +19,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nexus.Benchmarks", "benchmarks\Nexus.Benchmarks\Nexus.Benchmarks.csproj", "{B602750B-5E89-453F-841B-8D7F22DE58EB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nexus.Agent", "src\Nexus.Agent\Nexus.Agent.csproj", "{71F41120-5BC2-4684-ADB7-C8C97CCE8EAF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,10 @@ Global
 		{B602750B-5E89-453F-841B-8D7F22DE58EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B602750B-5E89-453F-841B-8D7F22DE58EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B602750B-5E89-453F-841B-8D7F22DE58EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71F41120-5BC2-4684-ADB7-C8C97CCE8EAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71F41120-5BC2-4684-ADB7-C8C97CCE8EAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71F41120-5BC2-4684-ADB7-C8C97CCE8EAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71F41120-5BC2-4684-ADB7-C8C97CCE8EAF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -51,6 +57,7 @@ Global
 		{59CBCE56-7832-4B55-854F-C9B5E4FBEA86} = {F226553B-2E5B-4910-AF31-0B718872AF18}
 		{FC047115-277B-448E-854F-275B5B8343A5} = {59CBCE56-7832-4B55-854F-C9B5E4FBEA86}
 		{B602750B-5E89-453F-841B-8D7F22DE58EB} = {40C5CF08-E45E-4F25-BE8F-B5BBD4B0EDB3}
+		{71F41120-5BC2-4684-ADB7-C8C97CCE8EAF} = {F226553B-2E5B-4910-AF31-0B718872AF18}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B035E550-8A68-427B-92F1-9B1A6977BF8F}

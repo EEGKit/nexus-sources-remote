@@ -4,39 +4,12 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Nexus.DataModel;
 using Nexus.Extensibility;
-using Nexus.Remoting;
 
-namespace Nexus.Remote;
+namespace Nexus.Sources;
 
-#warning Inherit from StructuredFileDataSource would be possible but collides with ReadAndModifyNexusData method"
-
-public static class Program
-{
-    public static async Task Main(string[] args)
-    {
-        // args
-        if (args.Length < 2)
-            throw new Exception("No argument for address and/or port was specified.");
-
-        // get address
-        var address = args[0];
-
-        // get port
-        int port;
-
-        try
-        {
-            port = int.Parse(args[1]);
-        }
-        catch (Exception ex)
-        {
-            throw new Exception("The second command line argument must be a valid port number.", ex);
-        }
-
-        var communicator = new RemoteCommunicator(new DotnetDataSource(), address, port);
-        await communicator.RunAsync();
-    }
-}
+/* Note: Inherit from StructuredFileDataSource would be possible 
+ * but collides with ReadAndModifyNexusData method
+ */
 
 public class DotnetDataSource : IDataSource
 {
@@ -69,11 +42,9 @@ public class DotnetDataSource : IDataSource
             return Task.FromResult(new CatalogRegistration[0]);
     }
 
-    public Task<ResourceCatalog> GetCatalogAsync(string catalogId, CancellationToken cancellationToken)
+    public Task<ResourceCatalog> EnrichCatalogAsync(ResourceCatalog catalog, CancellationToken cancellationToken)
     {
-        ResourceCatalog catalog;
-
-        if (catalogId == "/A/B/C")
+        if (catalog.Id == "/A/B/C")
         {
             var representation1 = new Representation(NexusDataType.INT64, TimeSpan.FromSeconds(1));
 
@@ -97,7 +68,7 @@ public class DotnetDataSource : IDataSource
                 .AddResources(resource1, resource2)
                 .Build();
         }
-        else if (catalogId == "/D/E/F")
+        else if (catalog.Id == "/D/E/F")
         {
             var representation = new Representation(NexusDataType.FLOAT64, TimeSpan.FromSeconds(1));
 
@@ -123,7 +94,7 @@ public class DotnetDataSource : IDataSource
         if (catalogId != "/A/B/C")
             throw new Exception("Unknown catalog identifier.");
 
-        var filePaths = Directory.GetFiles(_context.ResourceLocator.ToPath(), "*.dat", SearchOption.AllDirectories);
+        var filePaths = Directory.GetFiles(_context.ResourceLocator!.ToPath(), "*.dat", SearchOption.AllDirectories);
         var fileNames = filePaths.Select(filePath => Path.GetFileName(filePath));
 
         var dateTimes = fileNames
@@ -146,7 +117,7 @@ public class DotnetDataSource : IDataSource
 
         var periodPerFile = TimeSpan.FromMinutes(10);
         var maxFileCount = (end - begin).Ticks / periodPerFile.Ticks;
-        var filePaths = Directory.GetFiles(_context.ResourceLocator.ToPath(), "*.dat", SearchOption.AllDirectories);
+        var filePaths = Directory.GetFiles(_context.ResourceLocator!.ToPath(), "*.dat", SearchOption.AllDirectories);
         var fileNames = filePaths.Select(filePath => Path.GetFileName(filePath));
 
         var actualFileCount = fileNames
@@ -212,7 +183,7 @@ public class DotnetDataSource : IDataSource
             while (currentBegin < end)
             {
                 // find files
-                var searchPath = Path.Combine(_context.ResourceLocator.ToPath(), currentBegin.ToString("yyyy-MM"), currentBegin.ToString("yyyy-MM-dd"));
+                var searchPath = Path.Combine(_context.ResourceLocator!.ToPath(), currentBegin.ToString("yyyy-MM"), currentBegin.ToString("yyyy-MM-dd"));
                 var filePaths = Directory.GetFiles(searchPath, "*.dat", SearchOption.AllDirectories);
 
                 foreach (var filePath in filePaths)
