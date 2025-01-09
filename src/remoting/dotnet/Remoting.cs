@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Nexus.DataModel;
 using Nexus.Extensibility;
 using System.Buffers;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -11,9 +12,13 @@ using System.Text.Json.Serialization;
 
 namespace Nexus.Remoting;
 
-internal class Logger(NetworkStream commStream) : ILogger
+internal class Logger(NetworkStream commStream, Stopwatch watchdogTimer, CancellationToken cancellationToken) : ILogger
 {
+    private readonly Stopwatch _watchdogTimer = watchdogTimer;
+
     private readonly NetworkStream _commStream = commStream;
+
+    private readonly CancellationToken _cancellationToken = cancellationToken;
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
@@ -40,7 +45,8 @@ internal class Logger(NetworkStream commStream) : ILogger
             ["params"] = new JsonArray(logLevel.ToString(), formatter(state, exception))
         };
 
-        _ = Utilities.SendToServerAsync(notification, _commStream);
+        _ = Utilities.SendToServerAsync(notification, _commStream, _cancellationToken);
+        _watchdogTimer.Restart();
     }
 }
 
@@ -54,6 +60,8 @@ public class RemoteCommunicator
     private readonly NetworkStream _dataStream;
 
     private readonly Func<string, IDataSource> _getDataSource;
+
+    private readonly Stopwatch _watchdogTimer = new();
 
     private ILogger _logger = default!;
 
@@ -78,10 +86,15 @@ public class RemoteCommunicator
     }
 
     /// <summary>
+    /// Gets the time passed since the last communication.
+    /// </summary>
+    public TimeSpan LastCommunication => _watchdogTimer.Elapsed;
+
+    /// <summary>
     /// Starts the remoting operation.
     /// </summary>
     /// <returns></returns>
-    public Task RunAsync()
+    public Task RunAsync(CancellationToken cancellationToken)
     {
         static JsonElement Read(Span<byte> jsonRequest)
         {
@@ -122,7 +135,8 @@ public class RemoteCommunicator
                     {
                         try
                         {
-                            (var result, data, status) = await ProcessInvocationAsync(request);
+                            (var result, data, status) = await ProcessInvocationAsync(request, cancellationToken);
+                            _watchdogTimer.Restart();
 
                             response = new JsonObject()
                             {
@@ -153,18 +167,14 @@ public class RemoteCommunicator
 
                 response.Add("jsonrpc", "2.0");
 
-                string? id;
-
-                if (request.TryGetProperty("id", out var element2))
-                    id = element2.ToString();
-
-                else
-                    throw new Exception("Unable to read the request message id.");
+                var id = request.TryGetProperty("id", out var element2)
+                    ? element2.ToString()
+                    : throw new Exception("Unable to read the request message id.");
 
                 response.Add("id", id);
 
                 // send response
-                await Utilities.SendToServerAsync(response, _commStream);
+                await Utilities.SendToServerAsync(response, _commStream, cancellationToken);
 
                 // send data
                 if (!data.Equals(default) && !status.Equals(default))
@@ -177,7 +187,7 @@ public class RemoteCommunicator
         });
     }
 
-    private async Task<(JsonObject?, Memory<byte>, Memory<byte>)> ProcessInvocationAsync(JsonElement request)
+    private async Task<(JsonObject?, Memory<byte>, Memory<byte>)> ProcessInvocationAsync(JsonElement request, CancellationToken cancellationToken)
     {
 #warning Use strongly typed deserialization instead?
 
@@ -225,7 +235,7 @@ public class RemoteCommunicator
             if (rawContext.TryGetProperty("requestConfiguration", out var requestConfigurationElement))
                 requestConfiguration = JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>?>(requestConfigurationElement);
 
-            _logger = new Logger(_commStream);
+            _logger = new Logger(_commStream, _watchdogTimer, cancellationToken);
 
             var context = new DataSourceContext(
                 resourceLocator,
@@ -234,7 +244,7 @@ public class RemoteCommunicator
                 requestConfiguration
             );
 
-            await _dataSource.SetContextAsync(context, _logger, CancellationToken.None);
+            await _dataSource.SetContextAsync(context, _logger, cancellationToken);
         }
 
         else if (methodName == "getCatalogRegistrations")
@@ -243,7 +253,7 @@ public class RemoteCommunicator
                 throw new Exception("The data source context must be set before invoking other methods.");
 
             var path = @params[0].GetString()!;
-            var registrations = await _dataSource.GetCatalogRegistrationsAsync(path, CancellationToken.None);
+            var registrations = await _dataSource.GetCatalogRegistrationsAsync(path, cancellationToken);
 
             result = new JsonObject()
             {
@@ -257,7 +267,7 @@ public class RemoteCommunicator
                 throw new Exception("The data source context must be set before invoking other methods.");
 
             var originalCatalog = JsonSerializer.Deserialize<ResourceCatalog>(@params[0], Utilities.Options)!;
-            var catalog = await _dataSource.EnrichCatalogAsync(originalCatalog, CancellationToken.None);
+            var catalog = await _dataSource.EnrichCatalogAsync(originalCatalog, cancellationToken);
 
             result = new JsonObject()
             {
@@ -271,7 +281,7 @@ public class RemoteCommunicator
                 throw new Exception("The data source context must be set before invoking other methods.");
 
             var catalogId = @params[0].GetString()!;
-            var (begin, end) = await _dataSource.GetTimeRangeAsync(catalogId, CancellationToken.None);
+            var (begin, end) = await _dataSource.GetTimeRangeAsync(catalogId, cancellationToken);
 
             result = new JsonObject()
             {
@@ -293,7 +303,7 @@ public class RemoteCommunicator
             var endString = @params[2].GetString()!;
             var end = DateTime.ParseExact(endString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
 
-            var availability = await _dataSource.GetAvailabilityAsync(catalogId, begin, end, CancellationToken.None);
+            var availability = await _dataSource.GetAvailabilityAsync(catalogId, begin, end, cancellationToken);
 
             result = new JsonObject()
             {
@@ -368,7 +378,8 @@ public class RemoteCommunicator
 
         _logger.LogDebug("Read resource path {ResourcePath} from Nexus", resourcePath);
 
-        await Utilities.SendToServerAsync(readDataRequest, _commStream);
+        await Utilities.SendToServerAsync(readDataRequest, _commStream, cancellationToken);
+        _watchdogTimer.Restart();
 
         var size = ReadSize(_dataStream);
 
@@ -378,6 +389,7 @@ public class RemoteCommunicator
         _logger.LogTrace("Try to read {ByteCount} bytes from Nexus", size);
 
         _dataStream.InternalReadExactly(MemoryMarshal.AsBytes(buffer.Span));
+        _watchdogTimer.Restart();
     }
 
     private int ReadSize(NetworkStream currentStream)
@@ -407,18 +419,18 @@ internal static class Utilities
 
     public static JsonSerializerOptions Options { get; }
 
-    public static async Task SendToServerAsync(JsonNode response, NetworkStream currentStream)
+    public static async Task SendToServerAsync(JsonNode response, NetworkStream currentStream, CancellationToken cancellationToken)
     {
         var encodedResponse = JsonSerializer.SerializeToUtf8Bytes(response, Options);
         var messageLength = BitConverter.GetBytes(encodedResponse.Length);
         Array.Reverse(messageLength);
 
-        await _semaphore.WaitAsync(TimeSpan.FromMinutes(1));
+        await _semaphore.WaitAsync(TimeSpan.FromMinutes(1), cancellationToken);
 
         try
         {
-            await currentStream.WriteAsync(messageLength);
-            await currentStream.WriteAsync(encodedResponse);
+            await currentStream.WriteAsync(messageLength, cancellationToken);
+            await currentStream.WriteAsync(encodedResponse, cancellationToken);
             await currentStream.FlushAsync();
         }
         finally

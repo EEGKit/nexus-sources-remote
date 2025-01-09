@@ -26,7 +26,7 @@ public class RemoteTestsFixture : IDisposable
             var psi_build = new ProcessStartInfo("bash")
             {
                 /* Why `sleep infinity`? Because the test debugger seems to stop whenever a child process stops */
-                Arguments = "-c \"dotnet build ../../../../src/Nexus.Agent/Nexus.Agent.csproj && sleep infinity\"",
+                Arguments = "-c \"dotnet build ../../../../src/agent/dotnet/agent.csproj && sleep infinity\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
@@ -65,14 +65,14 @@ public class RemoteTestsFixture : IDisposable
             // Run Nexus.Agent
             var psi_run = new ProcessStartInfo("dotnet")
             {
-                Arguments = $"../../artifacts/bin/Nexus.Agent/debug/Nexus.Agent.dll",
-                WorkingDirectory="../../../../src/Nexus.Agent",
+                Arguments = $"../../../artifacts/bin/agent/debug/Nexus.Agent.dll",
+                WorkingDirectory="../../../../src/agent/dotnet",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
             };
 
-            psi_run.Environment["NEXUSAGENT_Paths__Config"] = "../../.nexus-agent/config";
+            psi_run.Environment["NEXUSAGENT_Paths__Config"] = "../../../.nexus-agent/config";
 
             _runProcess = new Process
             {
@@ -82,7 +82,7 @@ public class RemoteTestsFixture : IDisposable
 
             _runProcess.OutputDataReceived += (sender, e) =>
             {
-                // File.AppendAllText("/home/vincent/Downloads/output.txt", e.Data + Environment.NewLine);
+                File.AppendAllText("/home/vincent/Downloads/output.txt", e.Data + Environment.NewLine);
 
                 if (e.Data is not null && e.Data.Contains("Now listening on"))
                 {
@@ -93,7 +93,7 @@ public class RemoteTestsFixture : IDisposable
 
             _runProcess.ErrorDataReceived += (sender, e) =>
             {
-                // File.AppendAllText("/home/vincent/Downloads/error.txt", e.Data + Environment.NewLine);
+                File.AppendAllText("/home/vincent/Downloads/error.txt", e.Data + Environment.NewLine);
 
                 _success = false;
                 _semaphoreRun.Release();

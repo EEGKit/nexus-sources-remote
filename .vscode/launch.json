@@ -6,9 +6,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build-nexus-agent",
-            "program": "${workspaceFolder}/artifacts/bin/Nexus.Agent/debug/Nexus.Agent.dll",
+            "program": "${workspaceFolder}/artifacts/bin/agent/debug/Nexus.Agent.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/src/Nexus.Agent",
+            "cwd": "${workspaceFolder}/src/agent/dotnet",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",

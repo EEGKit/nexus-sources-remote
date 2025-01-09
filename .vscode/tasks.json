@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/src/Nexus.Agent/Nexus.Agent.csproj",
+                "${workspaceFolder}/src/agent/dotnet/agent.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],

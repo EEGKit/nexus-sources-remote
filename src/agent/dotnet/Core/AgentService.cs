@@ -15,10 +15,14 @@ public class TcpClientPair
     public NetworkStream? Data { get; set; }
 
     public RemoteCommunicator? RemoteCommunicator { get; set; }
+
+    public CancellationTokenSource CancellationTokenSource { get; } = new();
 }
 
 internal class AgentService
 {
+    private static readonly TimeSpan CLIENT_TIMEOUT = TimeSpan.FromMinutes(1);
+
     private readonly Lock _lock = new();
 
     private readonly ConcurrentDictionary<Guid, TcpClientPair> _tcpClientPairs = new();
@@ -58,6 +62,25 @@ internal class AgentService
         var tcpListener = new TcpListener(IPAddress.Any, 56145);
         tcpListener.Start();
 
+        // Detect and remove inactivate clients
+        _ = Task.Run(async () =>
+        {
+            while (true)
+            {
+                await Task.Delay(TimeSpan.FromMinutes(10));
+
+                foreach (var (key, pair) in _tcpClientPairs)
+                {
+                    if (pair.RemoteCommunicator!.LastCommunication >= CLIENT_TIMEOUT)
+                    {
+                        if (_tcpClientPairs.TryRemove(key, out var _))
+                            pair.CancellationTokenSource.Cancel();
+                    }
+                }
+            }
+        });
+
+        // Accept new clients and start communication
         return Task.Run(async () =>
         {
             while (!cancellationToken.IsCancellationRequested)
@@ -70,7 +93,7 @@ internal class AgentService
                         throw new Exception("client is not connected");
 
                     var streamReadCts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-                    var networkStream = client.GetStream(); /* no using because it would close the TCP client */
+                    var networkStream = client.GetStream(); /* no 'using' because it would close the TCP client */
 
                     // get connection id
                     var buffer1 = new byte[36];
@@ -159,7 +182,7 @@ internal class AgentService
                                         getDataSource: type => _extensionHive.GetInstance<IDataSource>(type)
                                     );
 
-                                    _ = pair.RemoteCommunicator.RunAsync();
+                                    _ = pair.RemoteCommunicator.RunAsync(pair.CancellationTokenSource.Token);
                                 }
                                 catch
                                 {

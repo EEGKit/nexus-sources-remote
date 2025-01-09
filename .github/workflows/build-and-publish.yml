@@ -65,8 +65,8 @@ jobs:
 
       - name: Build
         run: |
-          dotnet publish -c Release -o app /p:GeneratePackage=true src/Nexus.Agent/Nexus.Agent.csproj
-          # python -m build --wheel --outdir artifacts/package --no-isolation src/remoting/python-remoting
+          dotnet publish -c Release -o app /p:GeneratePackage=true src/agent/dotnet/agent.csproj
+          # python -m build --wheel --outdir artifacts/package --no-isolation src/remoting/python
 
       - name: Test
         run: |
@@ -76,7 +76,7 @@ jobs:
 
       - name: Docker Build
         run: |
-          docker build -t nexus-main/nexus-agent:v_next -f src/Nexus.Agent/Dockerfile .
+          docker build -t nexus-main/nexus-agent:v_next -f src/agent/dotnet/Dockerfile .
           docker save --output artifacts/images/nexus_agent_image.tar nexus-main/nexus-agent:v_next
 
       - name: Upload Artifacts
