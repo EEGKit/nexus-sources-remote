@@ -1,8 +1,3 @@
-// TODO
-// - use nginx basic auth to protect page? Or using a token provided by ENV variable?
-// - update README
-// - add option to change loglevel
-
 using Asp.Versioning;
 using Microsoft.Extensions.Options;
 using Nexus.Agent;

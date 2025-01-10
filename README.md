@@ -1,83 +1,11 @@
-# TODO: this README needs to be updated
-
-Port 56145 will be used for RPC comms.
-
 # Nexus Remote Data Source
 
 [![GitHub Actions](https://github.com/nexus-main/nexus-sources-remote/actions/workflows/build-and-publish.yml/badge.svg?branch=master)](https://github.com/nexus-main/nexus-sources-remote/actions)
 
-The RPC data source is different from normal data sources in that it allows any code to be executed which imposes a security risk. Additionally, the command to be executed (e.g. python) might not exist in the current environment. Nexus is distributed as Docker Container with minimum dependencies. Therefore another solution must exist to extend the system. An option would be to use Docker-in-Docker (`dind`) and start a new container which is just another command for the RCP data source. The container itself could be a calculation-only environment with network access (but no drive access).
+The data source `Nexus.Sources.Remote` allows to communicate with remote systems via TCP. The remote site must listen on port `56145` for incoming connections. Two TCP connections are required: The first one is for the communication which follows the `JSON-RPC` protocol. The second one is for bi-directional data transfer. Two packages exist to simplify implemention on the remote site: `Nexus.Remoting` (C#) and `nexus-remoting` (python). These packages provide the `RemoteCommunicator` type which handles the communication for you.
 
-Since the RPC command can be anything its use must be regulated.
+The basic aim of this extension is to enable Nexus to support extensions that are written in languages other than C#. In addition, the extraction of data from files should take place as close as possible to the actual storage location in order to avoid high latencies due to random file accesses. This brings us to the next topic: `Nexus Agent`
 
-## Process
-`GET extensions / static-parameters` + "rpc" and "rpc:available-commands")
+# Nexus Agent
 
-1. Show available RPC commands (e.g. `docker run --volume /volume1/Daten/users/{nexus:registering-user}:/data python:3.7.0 bash -c {docker-command}`)
-2. User selects a command
-3. Ask for command arguments (1x ask for each variable in command, e.g. `{username}` and `{docker-command}`).
-4. User provides arguments:
-
-______________________________
-
-> Example: Python
-
-Files:
- - data-source.py
- - requirements.txt
-
-`{docker-command}` =
-
-```properties
-env="/data/env"
-if [ ! -d $env ] then python3 -m venv $env fi;
-source $env/bin/activate
-python3 /data/bin/pip install -r /data/my-data-source/requirements.txt;
-python3 /data/my-data-source/data-source.py {rpc-port} {connection-id}
-```
-
-dependencies: Nexus.Extensibility
-
-______________________________
-
-
-> Example: .NET
-
-Files:
- - data-source.csproj
- - data-source.cs
-
-`{docker-command}` =
-
-```properties
-dotnet run data-source.csproj {rpc-port} {connection-id}
-```
-
-dependencies: Nexus.Extensibility
-
-______________________________
-
-5. Register
-
-`POST backendsources / register` + Username, Type = RpcDataSource, ResourceLocator, Configuration (with full docker command template + Configuration parameters (= command)). 
-
-This way RpcDataSource can take the docker command, compare to available commands and interpolate all missing parameters (here: the `docker-command` and the `rpc-port`). 
-
-(triggers catalogs reload)
-
-6. Verify
-
-`GET backendsources`
-
-7. Invoke
-
-Nexus merges `backend source config` and `global-config` (e.g. `rpc:available-commands:0:docker ...`) and `nexus:registering-user`). When merge conflicts occur, `global-config` should win.
-
-Nexus then provides the merged config to the Rpc data source instance:
-
-Rpc data source ...
-- gets instantiated with configuration values like `command`, `nexus:registering-user` and `docker-command`
-- interpolates `command` with missing values (multiple iterations to replace `rpc-port` and `connection-id` also)
-- executes command
-- does what rpc data sources do (communicate)
-
+Nexus Agent is an application that depends on the `Nexus.Remoting` package to listen for incoming connection requests from Nexus. It can be described as a mini-Nexus, since it acts - like Nexus - as a host for extensions. It can be used to provide data to Nexus that resides on a different server. Without Nexus Agent, it would be necessary to access raw data files over the network which is often quite slow due to many high latency random file accesses. Nexus Agent helps to greatly reduce this number by doing the actual work on behalf of Nexus and returning data streams with high throughput. It is available as Docker container to enable a quick start.
