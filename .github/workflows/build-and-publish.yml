@@ -45,19 +45,19 @@ jobs:
           dotnet-version: "9.0.x"
           dotnet-quality: "preview"
 
-      # - name: Set up Python  
-      #   uses: actions/setup-python@v3
-      #   with:
-      #     python-version: '3.9'
+      - name: Set up Python  
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
 
       - name: Create Docker Output Folder
         run: mkdir --parent artifacts/images
 
-      # - name: Install
-      #   run: |
-      #     npm install -g pyright
-      #     python -m pip install build wheel pytest pytest-asyncio
-      #     python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ nexus-extensibility
+      - name: Install
+        run: |
+          npm install -g pyright
+          python -m pip install build wheel pytest pytest-asyncio
+          python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ nexus-extensibility
 
       - name: Docker Setup
         id: buildx
@@ -116,10 +116,10 @@ jobs:
         env:
           MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
 
-      # - name: Python package (MyGet)
-      #   run: 'for filePath in artifacts/package/*.whl; do curl -k -X POST https://www.myget.org/F/apollo3zehn-dev/python/upload -H "Authorization: Bearer ${MYGET_API_KEY}" -F "data=@$filePath"; done'
-      #   env:
-      #     MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
+      - name: Python package (MyGet)
+        run: 'for filePath in artifacts/package/*.whl; do curl -k -X POST https://www.myget.org/F/apollo3zehn-dev/python/upload -H "Authorization: Bearer ${MYGET_API_KEY}" -F "data=@$filePath"; done'
+        env:
+          MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
 
       - name: Docker Login (Github Container Registry)
         uses: docker/login-action@v1
@@ -143,9 +143,9 @@ jobs:
 
     steps:
 
-      # - name: Install
-      #   run: |
-      #     python -m pip install twine
+      - name: Install
+        run: |
+          python -m pip install twine
 
       - name: Download Artifacts
         uses: actions/download-artifact@v3
@@ -166,10 +166,10 @@ jobs:
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
-      # - name: Python Package (PyPI)
-      #   run: twine upload artifacts/package/*.whl -u__token__ -p"${PYPI_API_KEY}"
-      #   env:
-      #     PYPI_API_KEY: ${{ secrets.PYPI_API_KEY }}
+      - name: Python Package (PyPI)
+        run: twine upload artifacts/package/*.whl -u__token__ -p"${PYPI_API_KEY}"
+        env:
+          PYPI_API_KEY: ${{ secrets.PYPI_API_KEY }}
 
       - name: Docker Login (Docker Hub)
         uses: docker/login-action@v1

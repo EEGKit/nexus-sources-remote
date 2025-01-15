@@ -7,11 +7,9 @@ import typing
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import (Any, Callable, ClassVar, Optional, Type, Union,
+from typing import (Any, Callable, ClassVar, Optional, Type, TypeVar, Union,
                     cast)
 from uuid import UUID
-
-from typing import TypeVar
 
 T = TypeVar("T")
 
@@ -102,7 +100,7 @@ class JsonEncoder:
                 return cast(T, instance3)
 
             # list
-            elif issubclass(origin, list):
+            elif issubclass(cast(type, origin), list):
 
                 listType = args[0]
                 instance1: list = list()
@@ -113,7 +111,7 @@ class JsonEncoder:
                 return cast(T, instance1)
             
             # dict
-            elif issubclass(origin, dict):
+            elif issubclass(cast(type, origin), dict):
 
                 # keyType = args[0]
                 valueType = args[1]
