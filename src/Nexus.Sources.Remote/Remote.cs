@@ -18,8 +18,11 @@ public partial class Remote : IDataSource, IDisposable
     private const int DEFAULT_AGENT_PORT = 56145;
 
     private ReadDataHandler? _readData;
+
     private static readonly int API_LEVEL = 1;
+
     private RemoteCommunicator _communicator = default!;
+    
     private IJsonRpcServer _rpcServer = default!;
 
     /* Possible features to be implemented for this data source:

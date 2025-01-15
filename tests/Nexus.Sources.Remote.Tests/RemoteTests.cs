@@ -15,14 +15,16 @@ public class RemoteTests(RemoteTestsFixture fixture)
 {
     private readonly RemoteTestsFixture _fixture = fixture;
 
-    [Fact]
-    public async Task ProvidesCatalog()
+    [Theory]
+    [InlineData(60000 /* dotnet */)] 
+    [InlineData(60001 /* python */)] 
+    public async Task ProvidesCatalog(int port)
     {
         await _fixture.Initialize;
         
         // Arrange
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext();
+        var context = CreateContext(port);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -49,13 +51,15 @@ public class RemoteTests(RemoteTestsFixture fixture)
         Assert.True(expectedDataTypes.SequenceEqual(actualDataTypes));
     }
 
-[Fact]
-    public async Task CanProvideTimeRange()
+    [Theory]
+    [InlineData(60000 /* dotnet */)] 
+    [InlineData(60001 /* python */)] 
+    public async Task CanProvideTimeRange(int port)
     {
         await _fixture.Initialize;
 
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext();
+        var context = CreateContext(port);
 
         var expectedBegin = new DateTime(2019, 12, 31, 12, 00, 00, DateTimeKind.Utc);
         var expectedEnd = new DateTime(2020, 01, 02, 09, 50, 00, DateTimeKind.Utc);
@@ -68,13 +72,15 @@ public class RemoteTests(RemoteTestsFixture fixture)
         Assert.Equal(expectedEnd, end);
     }
 
-[Fact]
-    public async Task CanProvideAvailability()
+    [Theory]
+    [InlineData(60000 /* dotnet */)] 
+    [InlineData(60001 /* python */)] 
+    public async Task CanProvideAvailability(int port)
     {
         await _fixture.Initialize;
 
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext();
+        var context = CreateContext(port);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -85,8 +91,10 @@ public class RemoteTests(RemoteTestsFixture fixture)
         Assert.Equal(2 / 144.0, actual, precision: 4);
     }
 
-[Fact]
-    public async Task CanReadFullDay()
+    [Theory]
+    [InlineData(60000 /* dotnet */)] 
+    [InlineData(60001 /* python */)] 
+    public async Task CanReadFullDay(int port)
     {
         // TODO fix this
         var complexData = true;
@@ -94,7 +102,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
         await _fixture.Initialize;
 
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext();
+        var context = CreateContext(port);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -149,14 +157,16 @@ public class RemoteTests(RemoteTestsFixture fixture)
         Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
     }
 
-[Fact]
-    public async Task CanLog()
+    [Theory]
+    [InlineData(60000 /* dotnet */)] 
+    [InlineData(60001 /* python */)] 
+    public async Task CanLog(int port)
     {
         await _fixture.Initialize;
 
         var loggerMock = new Mock<ILogger>();
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext();
+        var context = CreateContext(port);
 
         await dataSource.SetContextAsync(context, loggerMock.Object, CancellationToken.None);
 
@@ -172,13 +182,15 @@ public class RemoteTests(RemoteTestsFixture fixture)
         );
     }
 
-[Fact]
-    public async Task CanReadDataHandler()
+    [Theory]
+    [InlineData(60000 /* dotnet */)] 
+    [InlineData(60001 /* python */)] 
+    public async Task CanReadDataHandler(int port)
     {
         await _fixture.Initialize;
         
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext();
+        var context = CreateContext(port);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -228,10 +240,10 @@ public class RemoteTests(RemoteTestsFixture fixture)
         Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
     }
 
-    private static DataSourceContext CreateContext()
+    private static DataSourceContext CreateContext(int port)
     {
         return new DataSourceContext(
-            ResourceLocator: new Uri("tcp://127.0.0.1:56145"),
+            ResourceLocator: new Uri($"tcp://127.0.0.1:{port}"),
             SystemConfiguration: new Dictionary<string, JsonElement>()
             {
                 [typeof(Remote).FullName!] = JsonSerializer.SerializeToElement(new JsonObject()

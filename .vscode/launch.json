@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Nexus.Agent",
+            "name": "Launch Nexus.Agent (dotnet)",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build-nexus-agent",
@@ -12,7 +12,7 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "NEXUSAGENT_Paths__Config": "../../.nexus-agent/config"
+                "NEXUSAGENT_Paths__Config": "../../.nexus-agent-dotnet/config"
             }
         }
     ]

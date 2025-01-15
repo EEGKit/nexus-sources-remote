@@ -36,6 +36,7 @@ builder.Services
 builder.Services
     .AddSingleton<AgentService>();
 
+builder.Services.Configure<SystemOptions>(configuration.GetSection(SystemOptions.Section));
 builder.Services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.Section));
 
 // Package management

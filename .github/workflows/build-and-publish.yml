@@ -56,8 +56,7 @@ jobs:
       - name: Install
         run: |
           npm install -g pyright
-          python -m pip install build wheel pytest pytest-asyncio
-          python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ nexus-extensibility
+          python -m pip install -r requirements.txt
 
       - name: Docker Setup
         id: buildx
@@ -66,7 +65,7 @@ jobs:
       - name: Build
         run: |
           dotnet publish -c Release -o app /p:GeneratePackage=true src/agent/dotnet/agent.csproj
-          # python -m build --wheel --outdir artifacts/package --no-isolation src/remoting/python
+          python -m build --wheel --outdir artifacts/package --no-isolation src/remoting/python
 
       - name: Test
         run: |

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import os
 from uuid import UUID
 
 @dataclass
@@ -7,6 +8,9 @@ class PackageReference:
     configuration: dict[str, str]
 
 from fastapi import FastAPI
+
+json_rpc_listen_address = os.getenv("NEXUSAGENT_System__JsonRpcListenAddress", default="0.0.0.0")
+json_rpc_listen_port = os.getenv("NEXUSAGENT_System__JsonRpcListenPort", default=56145)
 
 app = FastAPI()
 

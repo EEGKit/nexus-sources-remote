@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Microsoft.Extensions.Options;
+using Nexus.Core;
 using Nexus.Extensibility;
 using Nexus.PackageManagement.Services;
 using Nexus.Remoting;
@@ -33,14 +35,18 @@ internal class AgentService
 
     private readonly ILogger<AgentService> _agentLogger;
 
+    private readonly SystemOptions _systemOptions;
+
     public AgentService(
         IExtensionHive extensionHive,
         IPackageService packageService,
-        ILogger<AgentService> agentLogger)
+        ILogger<AgentService> agentLogger,
+        IOptions<SystemOptions> systemOptions)
     {
         _extensionHive = extensionHive;
         _packageService = packageService;
         _agentLogger = agentLogger;
+        _systemOptions = systemOptions.Value;
     }
 
     public async Task LoadPackagesAsync(CancellationToken cancellationToken)
@@ -59,7 +65,16 @@ internal class AgentService
 
     public Task AcceptClientsAsync(CancellationToken cancellationToken)
     {
-        var tcpListener = new TcpListener(IPAddress.Any, 56145);
+        _agentLogger.LogInformation(
+            "Listening for JSON-RPC communication on {JsonRpcListenAddress}:{JsonRpcListenPort}",
+            _systemOptions.JsonRpcListenAddress, _systemOptions.JsonRpcListenPort
+        );
+
+        var tcpListener = new TcpListener(
+            IPAddress.Parse(_systemOptions.JsonRpcListenAddress),
+            _systemOptions.JsonRpcListenPort
+        );
+
         tcpListener.Start();
 
         // Detect and remove inactivate clients
