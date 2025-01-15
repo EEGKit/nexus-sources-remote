@@ -71,8 +71,8 @@ jobs:
       - name: Test
         run: |
           dotnet test -c Release
-          # pyright
-          # pytest
+          pyright
+          pytest
 
       - name: Docker Build
         run: |

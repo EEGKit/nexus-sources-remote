@@ -43,7 +43,7 @@ internal class PackageReferencesController(
     /// <param name="packageReference">The package reference to create.</param>
     [HttpPost]
     public Task<Guid> CreateAsync(
-        [FromBody] PackageReference packageReference)
+        PackageReference packageReference)
     {
         return _packageService.PutAsync(packageReference);
     }
