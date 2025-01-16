@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Nexus.Extensibility" Version="2.0.0-beta.42" />
+    <PackageReference Include="Nexus.Extensibility" />
   </ItemGroup>
 
 </Project>
