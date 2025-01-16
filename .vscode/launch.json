@@ -12,7 +12,19 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "NEXUSAGENT_Paths__Config": "../../../.nexus-agent-dotnet/config"
+                "NEXUSAGENT_PATHS__Config": "../../../.nexus-agent-dotnet/config"
+            }
+        },
+        {
+            "name": "Launch Nexus.Agent (python)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": ["main:app", "--reload"],
+            "cwd": "${workspaceFolder}/src/agent/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src/remoting/python",
+                "NEXUSAGENT_PATHS__Config": "../../../.nexus-agent-python/config"
             }
         }
     ]
