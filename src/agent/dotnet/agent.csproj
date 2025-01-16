@@ -9,7 +9,8 @@
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
-    <PackageReference Include="Nexus.PackageManagement" Version="2.0.0-beta.34" />
+    <PackageReference Include="Nexus.Extensibility" Version="2.0.0-beta.42" />
+    <PackageReference Include="Nexus.PackageManagement" Version="2.0.0-beta.42" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
     <PackageReference Include="Scalar.AspNetCore" Version="1.2.64" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />

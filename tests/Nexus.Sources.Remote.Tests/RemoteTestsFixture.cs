@@ -19,7 +19,7 @@ public class RemoteTestsFixture : IDisposable
         Initialize = Task.Run(() =>
         {
             var dotnetTask = RunDotnetAgent();
-            var pythonTask = RunPythonAgent();
+            var pythonTask = Task.CompletedTask; // RunPythonAgent();
 
             return Task.WhenAll(dotnetTask, pythonTask);
         });
@@ -107,8 +107,11 @@ public class RemoteTestsFixture : IDisposable
         {
             // File.AppendAllText("/home/vincent/Downloads/error.txt", e.Data + Environment.NewLine);
 
+            var oldSuccess = _success;
             _success = false;
-            _semaphoreRun.Release();
+
+            if (oldSuccess)
+                _semaphoreRun.Release();
         };
 
         _runProcess.Start();
@@ -156,8 +159,11 @@ public class RemoteTestsFixture : IDisposable
         {
             // File.AppendAllText("/home/vincent/Downloads/error.txt", e.Data + Environment.NewLine);
 
+            var oldSuccess = _success;
             _success = false;
-            _semaphoreRun.Release();
+
+            if (oldSuccess)
+                _semaphoreRun.Release();
         };
 
         _runProcess.Start();

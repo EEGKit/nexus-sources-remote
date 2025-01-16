@@ -10,7 +10,7 @@ from nexus_extensibility import (CatalogRegistration, DataSourceContext,
                                  ResourceBuilder, ResourceCatalogBuilder)
 
 
-class PythonDataSource(IDataSource):
+class Test(IDataSource):
     
     _root: str
 

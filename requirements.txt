@@ -1,6 +1,6 @@
 build
 fastapi[standard]
-nexus_api==2.0.0-beta.41
-nexus_extensibility==2.0.0-beta.41
+nexus_api==2.0.0-beta.42
+nexus_extensibility==2.0.0-beta.42
 pytest-asyncio
 wheel

@@ -256,7 +256,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
             },
             SourceConfiguration: new Dictionary<string, JsonElement>()
             {
-                ["type"] = JsonSerializer.SerializeToElement("Nexus.Sources.DotnetDataSource"),
+                ["type"] = JsonSerializer.SerializeToElement("Nexus.Sources.Test"),
                 ["resourceLocator"] = JsonSerializer.SerializeToElement("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA"))
             },
             RequestConfiguration: default

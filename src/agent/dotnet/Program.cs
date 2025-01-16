@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Microsoft.Extensions.Options;
 using Nexus.Agent;
 using Nexus.Core;
+using Nexus.Extensibility;
 using Nexus.PackageManagement.Core;
 using Scalar.AspNetCore;
 
@@ -40,12 +41,14 @@ builder.Services.Configure<SystemOptions>(configuration.GetSection(SystemOptions
 builder.Services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.Section));
 
 // Package management
-builder.Services.AddPackageManagement();
+builder.Services.AddPackageManagement<IDataSource, IDataWriter>();
 
 builder.Services.AddSingleton<IPackageManagementPathsOptions>(
     serviceProvider => serviceProvider.GetRequiredService<IOptions<PathsOptions>>().Value);
 
 var app = builder.Build();
+
+var b = app.Services.GetRequiredService<IOptions<PathsOptions>>().Value;
 
 app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
 app.MapOpenApi();

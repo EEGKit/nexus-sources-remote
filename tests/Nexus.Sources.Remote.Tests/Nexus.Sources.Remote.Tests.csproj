@@ -11,7 +11,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
-    <PackageReference Include="Nexus.Extensibility" Version="2.0.0-beta.34" />
+    <PackageReference Include="Nexus.Extensibility" Version="2.0.0-beta.42" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -24,11 +24,11 @@
   </ItemGroup>
   
   <ItemGroup>
-    <Compile Remove="dotnet/remote.cs" />
+    <Compile Remove="dotnet/test.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="python/remote.py">
+    <None Update="python/test.py">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="*TESTDATA/**/*">

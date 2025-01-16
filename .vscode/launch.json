@@ -12,7 +12,7 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "NEXUSAGENT_Paths__Config": "../../.nexus-agent-dotnet/config"
+                "NEXUSAGENT_Paths__Config": "../../../.nexus-agent-dotnet/config"
             }
         }
     ]

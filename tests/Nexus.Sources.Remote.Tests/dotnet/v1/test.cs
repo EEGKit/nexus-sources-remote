@@ -11,7 +11,7 @@ namespace Nexus.Sources;
  * but collides with ReadAndModifyNexusData method
  */
 
-public class DotnetDataSource : IDataSource
+public class Test : IDataSource
 {
     private DataSourceContext _context = default!;
 
