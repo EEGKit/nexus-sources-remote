@@ -5,7 +5,7 @@ import setuptools
 
 source_dir = os.getcwd()
 
-build_dir = "../../../artifacts/obj/python-client"
+build_dir = "../../../artifacts/obj/python-remoting"
 Path(build_dir).mkdir(parents=True, exist_ok=True)
 os.chdir(build_dir)
 

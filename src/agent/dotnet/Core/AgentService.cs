@@ -5,7 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Nexus.Core;
 using Nexus.Extensibility;
-using Nexus.PackageManagement.Services;
+using Apollo3zehn.PackageManagement.Services;
 using Nexus.Remoting;
 
 namespace Nexus.Agent;

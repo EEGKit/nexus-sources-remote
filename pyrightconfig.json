@@ -1,5 +1,6 @@
 {
   "include": [
+    "src/agent/python",
     "src/remoting/python",
     "tests/remoting/python-tests",
     "tests/Nexus.Sources.Remote.Tests/python"

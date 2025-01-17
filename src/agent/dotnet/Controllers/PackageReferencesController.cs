@@ -3,8 +3,8 @@
 
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
-using Nexus.PackageManagement.Services;
-using Nexus.PackageManagement;
+using Apollo3zehn.PackageManagement.Services;
+using Apollo3zehn.PackageManagement;
 
 namespace Nexus.Controllers;
 

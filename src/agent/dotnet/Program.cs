@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using Nexus.Agent;
 using Nexus.Core;
 using Nexus.Extensibility;
-using Nexus.PackageManagement.Core;
+using Apollo3zehn.PackageManagement.Core;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder();

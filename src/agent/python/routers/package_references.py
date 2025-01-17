@@ -1,9 +1,8 @@
 from uuid import UUID
 
+from apollo3zehn_package_management import PackageReference, PackageService
 from fastapi import APIRouter, HTTPException
 from options import config_folder_path
-from services import PackageService
-from typedefs import PackageReference
 
 router = APIRouter(
     prefix="/api/v1/packagereferences",
