@@ -1,14 +1,13 @@
+using Apollo3zehn.PackageManagement.Services;
+using Microsoft.Extensions.Options;
+using Nexus.Extensibility;
+using Nexus.Remoting;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Microsoft.Extensions.Options;
-using Nexus.Core;
-using Nexus.Extensibility;
-using Apollo3zehn.PackageManagement.Services;
-using Nexus.Remoting;
 
-namespace Nexus.Agent;
+namespace Nexus.Agent.Core;
 
 public class TcpClientPair
 {
@@ -29,7 +28,7 @@ internal class AgentService
 
     private readonly ConcurrentDictionary<Guid, TcpClientPair> _tcpClientPairs = new();
 
-    private readonly IExtensionHive _extensionHive;
+    private readonly IExtensionHive<IDataSource> _extensionHive;
 
     private readonly IPackageService _packageService;
 
@@ -38,7 +37,7 @@ internal class AgentService
     private readonly SystemOptions _systemOptions;
 
     public AgentService(
-        IExtensionHive extensionHive,
+        IExtensionHive<IDataSource> extensionHive,
         IPackageService packageService,
         ILogger<AgentService> agentLogger,
         IOptions<SystemOptions> systemOptions)
@@ -194,7 +193,7 @@ internal class AgentService
                                     pair.RemoteCommunicator = new RemoteCommunicator(
                                         pair.Comm,
                                         pair.Data,
-                                        getDataSource: type => _extensionHive.GetInstance<IDataSource>(type)
+                                        getDataSource: type => _extensionHive.GetInstance(type)
                                     );
 
                                     _ = pair.RemoteCommunicator.RunAsync(pair.CancellationTokenSource.Token);

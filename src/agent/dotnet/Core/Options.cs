@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Nexus.Core;
+namespace Nexus.Agent.Core;
 
 internal abstract record NexusAgentOptions()
 {

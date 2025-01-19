@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Nexus.Agent (dotnet)",
+            "name": "Nexus.Agent (dotnet)",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build-nexus-agent",
@@ -16,7 +16,7 @@
             }
         },
         {
-            "name": "Launch Nexus.Agent (python)",
+            "name": "Nexus.Agent (python)",
             "type": "debugpy",
             "request": "launch",
             "module": "uvicorn",

@@ -1,59 +1,32 @@
-using Asp.Versioning;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.Options;
-using Nexus.Agent;
-using Nexus.Core;
+using Nexus.Agent.Core;
 using Nexus.Extensibility;
-using Apollo3zehn.PackageManagement.Core;
-using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder();
 
 var configuration = NexusAgentOptions.BuildConfiguration();
 builder.Configuration.AddConfiguration(configuration);
 
-builder.Services
+builder.Services.AddAgentOpenApi();
+builder.Services.AddPackageManagement();
+builder.Services.AddExtensionHive<IDataSource>();
 
-    .AddOpenApi()
-    // .AddOpenApi("v2")
-
-    .AddApiVersioning(config =>
-    {
-        config.ReportApiVersions = true;
-        config.ApiVersionReader = new UrlSegmentApiVersionReader();
-    })
-
-    .AddApiExplorer(config =>
-    {
-        config.GroupNameFormat = "'v'VVV";
-        config.SubstituteApiVersionInUrl = true;
-    });
-
-builder.Services
-    .AddControllers()
-    .ConfigureApplicationPartManager(
-        manager => manager.FeatureProviders.Add(new InternalControllerFeatureProvider())
-    );
-
-builder.Services
-    .AddSingleton<AgentService>();
-
-builder.Services.Configure<SystemOptions>(configuration.GetSection(SystemOptions.Section));
-builder.Services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.Section));
-
-// Package management
-builder.Services.AddPackageManagement<IDataSource, IDataWriter>();
+builder.Services.AddSingleton<AgentService>();
 
 builder.Services.AddSingleton<IPackageManagementPathsOptions>(
     serviceProvider => serviceProvider.GetRequiredService<IOptions<PathsOptions>>().Value);
 
+builder.Services.Configure<SystemOptions>(configuration.GetSection(SystemOptions.Section));
+builder.Services.Configure<PathsOptions>(configuration.GetSection(PathsOptions.Section));
+
 var app = builder.Build();
 
-var b = app.Services.GetRequiredService<IOptions<PathsOptions>>().Value;
+var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+app.UseAgentOpenApi(provider);
 
-app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
-app.MapOpenApi();
-app.MapScalarApiReference();
 app.MapControllers();
+app.MapGet("/", () => Results.Redirect("/api"));
 
 var pathsOptions = app.Services.GetRequiredService<IOptions<PathsOptions>>();
 

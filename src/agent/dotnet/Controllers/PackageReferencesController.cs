@@ -1,12 +1,8 @@
-// MIT License
-// Copyright (c) [2024] [nexus-main]
-
-using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Apollo3zehn.PackageManagement.Services;
 using Apollo3zehn.PackageManagement;
 
-namespace Nexus.Controllers;
+namespace Nexus.Agent.Controllers;
 
 /// <summary>
 /// Provides access to package references.
@@ -15,18 +11,14 @@ namespace Nexus.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
 internal class PackageReferencesController(
-    IPackageService packageService,
-    IExtensionHive extensionHive) : ControllerBase
+    IPackageService packageService) : ControllerBase
 {
     // GET      /api/packagereferences
     // POST     /api/packagereferences
     // DELETE   /api/packagereferences/{id}
-    // GET      /api/packagereferences/{id}/versions
 
     private readonly IPackageService _packageService = packageService;
     
-    private readonly IExtensionHive _extensionHive = extensionHive;
-
     /// <summary>
     /// Gets the list of package references.
     /// </summary>
@@ -57,26 +49,5 @@ internal class PackageReferencesController(
         Guid id)
     {
         return _packageService.DeleteAsync(id);
-    }
-
-    /// <summary>
-    /// Gets package versions.
-    /// </summary>
-    /// <param name="id">The ID of the package reference.</param>
-    /// <param name="cancellationToken">A token to cancel the current operation.</param>
-    [HttpGet("{id}/versions")]
-    public async Task<ActionResult<string[]>> GetVersionsAsync(
-        Guid id,
-        CancellationToken cancellationToken)
-    {
-        var packageReferenceMap = await _packageService.GetAllAsync();
-
-        if (!packageReferenceMap.TryGetValue(id, out var packageReference))
-            return NotFound($"Unable to find package reference with ID {id}.");
-
-        var result = await _extensionHive
-            .GetVersionsAsync(packageReference, cancellationToken);
-
-        return result;
     }
 }
