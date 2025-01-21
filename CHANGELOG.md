@@ -1,3 +1,7 @@
+## v2.0.0-beta.40 - 2025-01-21
+
+- Release nexus-agent-dotnet and nexus-agent-python.
+
 ## v2.0.0-beta.39 - 2025-01-08
 
 - Release Nexus.Agent.

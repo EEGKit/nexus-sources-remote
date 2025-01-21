@@ -43,21 +43,19 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.x"
-          dotnet-quality: "preview"
 
-      # - name: Set up Python  
-      #   uses: actions/setup-python@v3
-      #   with:
-      #     python-version: '3.9'
+      - name: Set up Python  
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
 
       - name: Create Docker Output Folder
         run: mkdir --parent artifacts/images
 
-      # - name: Install
-      #   run: |
-      #     npm install -g pyright
-      #     python -m pip install build wheel pytest pytest-asyncio
-      #     python -m pip install --pre --index-url https://www.myget.org/F/apollo3zehn-dev/python/ nexus-extensibility
+      - name: Install
+        run: |
+          npm install -g pyright
+          python -m pip install -r requirements.txt
 
       - name: Docker Setup
         id: buildx
@@ -66,18 +64,21 @@ jobs:
       - name: Build
         run: |
           dotnet publish -c Release -o app /p:GeneratePackage=true src/agent/dotnet/agent.csproj
-          # python -m build --wheel --outdir artifacts/package --no-isolation src/remoting/python
+          python -m build --wheel --outdir artifacts/package --no-isolation src/remoting/python
 
       - name: Test
         run: |
           dotnet test -c Release
-          # pyright
-          # pytest
+          pyright
+          pytest
 
       - name: Docker Build
         run: |
-          docker build -t nexus-main/nexus-agent:v_next -f src/agent/dotnet/Dockerfile .
-          docker save --output artifacts/images/nexus_agent_image.tar nexus-main/nexus-agent:v_next
+          docker build -t nexus-main/nexus-agent-dotnet:v_next -f src/agent/dotnet/Dockerfile .
+          docker save --output artifacts/images/nexus_agent_dotnet_image.tar nexus-main/nexus-agent-dotnet:v_next
+
+          docker build -t nexus-main/nexus-agent-python:v_next -f src/agent/dotnet/Dockerfile .
+          docker save --output artifacts/images/nexus_agent_python_image.tar nexus-main/nexus-agent-python:v_next
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
@@ -109,17 +110,19 @@ jobs:
           path: artifacts
 
       - name: Docker Load Image
-        run: docker load --input artifacts/images/nexus_agent_image.tar
+        run: |
+          docker load --input artifacts/images/nexus_agent_dotnet_image.tar
+          docker load --input artifacts/images/nexus_agent_python_image.tar
 
       - name: Nuget package (MyGet)
         run: dotnet nuget push 'artifacts/package/release/*.nupkg' --api-key ${MYGET_API_KEY} --source https://www.myget.org/F/apollo3zehn-dev/api/v3/index.json
         env:
           MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
 
-      # - name: Python package (MyGet)
-      #   run: 'for filePath in artifacts/package/*.whl; do curl -k -X POST https://www.myget.org/F/apollo3zehn-dev/python/upload -H "Authorization: Bearer ${MYGET_API_KEY}" -F "data=@$filePath"; done'
-      #   env:
-      #     MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
+      - name: Python package (MyGet)
+        run: 'for filePath in artifacts/package/*.whl; do curl -k -X POST https://www.myget.org/F/apollo3zehn-dev/python/upload -H "Authorization: Bearer ${MYGET_API_KEY}" -F "data=@$filePath"; done'
+        env:
+          MYGET_API_KEY: ${{ secrets.MYGET_API_KEY }}
 
       - name: Docker Login (Github Container Registry)
         uses: docker/login-action@v1
@@ -130,8 +133,11 @@ jobs:
 
       - name: Docker Push
         run: |
-          docker tag nexus-main/nexus-agent:v_next ghcr.io/nexus-main/nexus-agent:${{ needs.build.outputs.version }}
-          docker push ghcr.io/nexus-main/nexus-agent:${{ needs.build.outputs.version }}
+          docker tag nexus-main/nexus-agent-dotnet:v_next ghcr.io/nexus-main/nexus-agent-dotnet:${{ needs.build.outputs.version }}
+          docker push ghcr.io/nexus-main/nexus-agent-dotnet:${{ needs.build.outputs.version }}
+
+          docker tag nexus-main/nexus-agent-python:v_next ghcr.io/nexus-main/nexus-agent-python:${{ needs.build.outputs.version }}
+          docker push ghcr.io/nexus-main/nexus-agent-python:${{ needs.build.outputs.version }}
 
   publish_release:
 
@@ -143,9 +149,9 @@ jobs:
 
     steps:
 
-      # - name: Install
-      #   run: |
-      #     python -m pip install twine
+      - name: Install
+        run: |
+          python -m pip install twine
 
       - name: Download Artifacts
         uses: actions/download-artifact@v3
@@ -154,7 +160,9 @@ jobs:
           path: artifacts
 
       - name: Docker Load Image
-        run: docker load --input artifacts/images/nexus_agent_image.tar
+        run: |
+          docker load --input artifacts/images/nexus_agent_dotnet_image.tar
+          docker load --input artifacts/images/nexus_agent_python_image.tar
 
       - name: GitHub Release Artifacts
         uses: softprops/action-gh-release@v1
@@ -166,10 +174,10 @@ jobs:
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
-      # - name: Python Package (PyPI)
-      #   run: twine upload artifacts/package/*.whl -u__token__ -p"${PYPI_API_KEY}"
-      #   env:
-      #     PYPI_API_KEY: ${{ secrets.PYPI_API_KEY }}
+      - name: Python Package (PyPI)
+        run: twine upload artifacts/package/*.whl -u__token__ -p"${PYPI_API_KEY}"
+        env:
+          PYPI_API_KEY: ${{ secrets.PYPI_API_KEY }}
 
       - name: Docker Login (Docker Hub)
         uses: docker/login-action@v1
@@ -179,5 +187,8 @@ jobs:
 
       - name: Docker Push
         run: |
-          docker tag nexus-main/nexus-agent:v_next nexusmain/nexus-agent:${{ needs.build.outputs.version }}
-          docker push nexusmain/nexus-agent:${{ needs.build.outputs.version }}
+          docker tag nexus-main/nexus-agent-dotnet:v_next nexusmain/nexus-agent-dotnet:${{ needs.build.outputs.version }}
+          docker push nexusmain/nexus-agent-dotnet:${{ needs.build.outputs.version }}
+
+          docker tag nexus-main/nexus-agent-python:v_next nexusmain/nexus-agent-python:${{ needs.build.outputs.version }}
+          docker push nexusmain/nexus-agent-python:${{ needs.build.outputs.version }}

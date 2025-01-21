@@ -11,11 +11,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Nexus.Extensibility" Version="2.0.0-beta.34">
+    <PackageReference Include="Nexus.Extensibility">
       <ExcludeAssets>runtime;native</ExcludeAssets>
     </PackageReference>
 	  
-    <PackageReference Include="StreamJsonRpc" Version="2.20.20" />
+    <PackageReference Include="StreamJsonRpc" />
   </ItemGroup>
 
 </Project>

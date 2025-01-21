@@ -1,12 +1,9 @@
-// MIT License
-// Copyright (c) [2024] [nexus-main]
-
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using System.Reflection;
 
-namespace Nexus.PackageManagement.Core;
+namespace Nexus.Agent.Core;
 
 internal class InternalControllerFeatureProvider : IApplicationFeatureProvider<ControllerFeature>
 {

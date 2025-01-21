@@ -1,7 +1,5 @@
-import asyncio
 import glob
 import os
-import sys
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 from urllib.request import url2pathname
@@ -9,11 +7,11 @@ from urllib.request import url2pathname
 from nexus_extensibility import (CatalogRegistration, DataSourceContext,
                                  IDataSource, LogLevel, NexusDataType,
                                  ReadDataHandler, ReadRequest, Representation,
-                                 ResourceBuilder, ResourceCatalogBuilder)
-from nexus_remoting import RemoteCommunicator
+                                 ResourceBuilder, ResourceCatalog,
+                                 ResourceCatalogBuilder)
 
 
-class PythonDataSource(IDataSource):
+class Test(IDataSource):
     
     _root: str
 
@@ -42,9 +40,11 @@ class PythonDataSource(IDataSource):
         else:
             return []
 
-    async def get_catalog(self, catalog_id: str):
+    async def enrich_catalog(self, catalog: ResourceCatalog):
 
-        if (catalog_id == "/A/B/C"):
+        # TODO: return catalog.merge(new_catalog)
+
+        if (catalog.id == "/A/B/C"):
 
             representation = Representation(NexusDataType.INT64, timedelta(seconds=1))
 
@@ -68,7 +68,7 @@ class PythonDataSource(IDataSource):
                 .add_resources([resource1, resource2]) \
                 .build()
 
-        elif (catalog_id == "/D/E/F"):
+        elif (catalog.id == "/D/E/F"):
 
             representation = Representation(NexusDataType.FLOAT64, timedelta(seconds=1))
 
@@ -207,19 +207,3 @@ class PythonDataSource(IDataSource):
 
             for i in range(0, len(request.status)):
                 request.status[i] = 1
-
-# args
-if len(sys.argv) < 3:
-    raise Exception("No argument for address and/or port was specified.")
-
-# get address
-address = sys.argv[1]
-
-# get port
-try:
-    port = int(sys.argv[2])
-except Exception as ex:
-    raise Exception(f"The second command line argument must be a valid port number. Inner error: {str(ex)}")
-
-# run
-asyncio.run(RemoteCommunicator(PythonDataSource(), address, port).run())

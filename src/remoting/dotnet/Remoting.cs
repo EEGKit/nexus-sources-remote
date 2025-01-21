@@ -12,7 +12,11 @@ using System.Text.Json.Serialization;
 
 namespace Nexus.Remoting;
 
-internal class Logger(NetworkStream commStream, Stopwatch watchdogTimer, CancellationToken cancellationToken) : ILogger
+internal class Logger(
+    NetworkStream commStream, 
+    Stopwatch watchdogTimer, 
+    CancellationToken cancellationToken
+) : ILogger
 {
     private readonly Stopwatch _watchdogTimer = watchdogTimer;
 
@@ -74,8 +78,8 @@ public class RemoteCommunicator
     /// <param name="dataStream">The network stream for data.</param>
     /// <param name="getDataSource">A func to get a new data source instance by its type name.</param>
     public RemoteCommunicator(
-        NetworkStream commStream, 
-        NetworkStream dataStream, 
+        NetworkStream commStream,
+        NetworkStream dataStream,
         Func<string, IDataSource> getDataSource
     )
     {

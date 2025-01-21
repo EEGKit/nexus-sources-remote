@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Nexus.Agent",
+            "name": "Nexus.Agent (dotnet)",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build-nexus-agent",
@@ -12,7 +12,21 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "NEXUSAGENT_Paths__Config": "../../.nexus-agent/config"
+                "NEXUSAGENT_PATHS__CONFIG": "../../../.nexus-agent-dotnet/config",
+                "NEXUSAGENT_SYSTEM__JSONRPCLISTENPORT": "60000"
+            }
+        },
+        {
+            "name": "Nexus.Agent (python)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "fastapi",
+            "args": ["run", "main.py"],
+            "cwd": "${workspaceFolder}/src/agent/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src/remoting/python",
+                "NEXUSAGENT_PATHS__CONFIG": "../../../.nexus-agent-python/config",
+                "NEXUSAGENT_SYSTEM__JSONRPCLISTENPORT": "60001"
             }
         }
     ]

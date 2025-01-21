@@ -13,16 +13,33 @@ namespace Nexus.Sources.Tests;
 public class RemoteTests(RemoteTestsFixture fixture)
     : IClassFixture<RemoteTestsFixture>
 {
+    private const string DOTNET = "DOTNET";
+    private const string PYTHON = "PYTHON";
+
+    private static readonly Dictionary<string, int> _portMap = new()
+    {
+        [DOTNET] = 60000,
+        [PYTHON] = 60001
+    };
+
+    private static readonly Dictionary<string, string> _extensionNameMap = new()
+    {
+        [DOTNET] = "Nexus.Sources.Test",
+        [PYTHON] = "foo.Test"
+    };
+
     private readonly RemoteTestsFixture _fixture = fixture;
 
-    [Fact]
-    public async Task ProvidesCatalog()
+    [Theory]
+    [InlineData(DOTNET)] 
+    [InlineData(PYTHON)] 
+    public async Task ProvidesCatalog(string language)
     {
         await _fixture.Initialize;
         
         // Arrange
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext();
+        var context = CreateContext(language);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -49,13 +66,15 @@ public class RemoteTests(RemoteTestsFixture fixture)
         Assert.True(expectedDataTypes.SequenceEqual(actualDataTypes));
     }
 
-[Fact]
-    public async Task CanProvideTimeRange()
+    [Theory]
+    [InlineData(DOTNET)] 
+    [InlineData(PYTHON)] 
+    public async Task CanProvideTimeRange(string language)
     {
         await _fixture.Initialize;
 
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext();
+        var context = CreateContext(language);
 
         var expectedBegin = new DateTime(2019, 12, 31, 12, 00, 00, DateTimeKind.Utc);
         var expectedEnd = new DateTime(2020, 01, 02, 09, 50, 00, DateTimeKind.Utc);
@@ -68,13 +87,15 @@ public class RemoteTests(RemoteTestsFixture fixture)
         Assert.Equal(expectedEnd, end);
     }
 
-[Fact]
-    public async Task CanProvideAvailability()
+    [Theory]
+    [InlineData(DOTNET)] 
+    [InlineData(PYTHON)] 
+    public async Task CanProvideAvailability(string language)
     {
         await _fixture.Initialize;
 
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext();
+        var context = CreateContext(language);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -85,8 +106,10 @@ public class RemoteTests(RemoteTestsFixture fixture)
         Assert.Equal(2 / 144.0, actual, precision: 4);
     }
 
-[Fact]
-    public async Task CanReadFullDay()
+    [Theory]
+    [InlineData(DOTNET)] 
+    [InlineData(PYTHON)] 
+    public async Task CanReadFullDay(string language)
     {
         // TODO fix this
         var complexData = true;
@@ -94,7 +117,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
         await _fixture.Initialize;
 
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext();
+        var context = CreateContext(language);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -149,14 +172,16 @@ public class RemoteTests(RemoteTestsFixture fixture)
         Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
     }
 
-[Fact]
-    public async Task CanLog()
+    [Theory]
+    [InlineData(DOTNET)] 
+    [InlineData(PYTHON)] 
+    public async Task CanLog(string language)
     {
         await _fixture.Initialize;
 
         var loggerMock = new Mock<ILogger>();
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext();
+        var context = CreateContext(language);
 
         await dataSource.SetContextAsync(context, loggerMock.Object, CancellationToken.None);
 
@@ -172,13 +197,15 @@ public class RemoteTests(RemoteTestsFixture fixture)
         );
     }
 
-[Fact]
-    public async Task CanReadDataHandler()
+    [Theory]
+    [InlineData(DOTNET)] 
+    [InlineData(PYTHON)] 
+    public async Task CanReadDataHandler(string language)
     {
         await _fixture.Initialize;
         
         var dataSource = new Remote() as IDataSource;
-        var context = CreateContext();
+        var context = CreateContext(language);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
 
@@ -228,10 +255,13 @@ public class RemoteTests(RemoteTestsFixture fixture)
         Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
     }
 
-    private static DataSourceContext CreateContext()
+    private static DataSourceContext CreateContext(string language)
     {
+        var port = _portMap[language];
+        var extensionName = _extensionNameMap[language];
+
         return new DataSourceContext(
-            ResourceLocator: new Uri("tcp://127.0.0.1:56145"),
+            ResourceLocator: new Uri($"tcp://127.0.0.1:{port}"),
             SystemConfiguration: new Dictionary<string, JsonElement>()
             {
                 [typeof(Remote).FullName!] = JsonSerializer.SerializeToElement(new JsonObject()
@@ -244,7 +274,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
             },
             SourceConfiguration: new Dictionary<string, JsonElement>()
             {
-                ["type"] = JsonSerializer.SerializeToElement("Nexus.Sources.DotnetDataSource"),
+                ["type"] = JsonSerializer.SerializeToElement(extensionName),
                 ["resourceLocator"] = JsonSerializer.SerializeToElement("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA"))
             },
             RequestConfiguration: default

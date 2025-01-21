@@ -1,17 +1,12 @@
-# Python <= 3.9
-from __future__ import annotations
-
 import dataclasses
 import re
 import typing
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import (Any, Callable, ClassVar, Optional, Type, Union,
+from typing import (Any, Callable, ClassVar, Optional, Type, TypeVar, Union,
                     cast)
 from uuid import UUID
-
-from typing import TypeVar
 
 T = TypeVar("T")
 
@@ -57,7 +52,8 @@ class JsonEncoder:
         
         # dict
         elif isinstance(value, dict):
-            value = {key:JsonEncoder._try_encode(current_value, options) for key, current_value in value.items()}
+            # also encode key, it could be a UUID
+            value = {JsonEncoder._try_encode(key, options):JsonEncoder._try_encode(current_value, options) for key, current_value in value.items()}
 
         elif dataclasses.is_dataclass(value):
             # dataclasses.asdict(value) would be good choice here, but it also converts nested dataclasses into
@@ -102,7 +98,7 @@ class JsonEncoder:
                 return cast(T, instance3)
 
             # list
-            elif issubclass(origin, list):
+            elif issubclass(cast(type, origin), list):
 
                 listType = args[0]
                 instance1: list = list()
@@ -113,15 +109,16 @@ class JsonEncoder:
                 return cast(T, instance1)
             
             # dict
-            elif issubclass(origin, dict):
+            elif issubclass(cast(type, origin), dict):
 
-                # keyType = args[0]
+                keyType = args[0]
                 valueType = args[1]
 
                 instance2: dict = dict()
 
                 for key, value in data.items():
-                    instance2[key] = JsonEncoder._decode(valueType, value, options)
+                    # also decode key, it could be a UUID
+                    instance2[JsonEncoder._decode(keyType, key, options)] = JsonEncoder._decode(valueType, value, options)
 
                 return cast(T, instance2)
 

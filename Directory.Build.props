@@ -12,6 +12,7 @@
     </RestoreAdditionalProjectSources>
     <UseArtifactsOutput>true</UseArtifactsOutput>
     <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+    <NoWarn>NU1507</NoWarn>
   </PropertyGroup>
 
 </Project>

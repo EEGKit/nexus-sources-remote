@@ -5,7 +5,7 @@ import setuptools
 
 source_dir = os.getcwd()
 
-build_dir = "../../../artifacts/obj/python-client"
+build_dir = "../../../artifacts/obj/python-remoting"
 Path(build_dir).mkdir(parents=True, exist_ok=True)
 os.chdir(build_dir)
 
@@ -45,8 +45,8 @@ setuptools.setup(
     package_dir={
         "nexus_remoting": os.path.join(source_dir, "nexus_remoting")
     },
-    python_requires=">=3.9",
+    python_requires=">=3.10",
     install_requires=[
-        "nexus-extensibility>=2.0.0b24"
+        "nexus-extensibility>=2.0.0b42"
     ]
 )

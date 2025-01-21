@@ -1,14 +1,15 @@
 import json
 import socket
 import struct
-from datetime import datetime
+import time
+from datetime import datetime, timedelta
 from threading import Lock
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, Awaitable, Callable, Dict, Optional, Tuple, cast
 from urllib.parse import urlparse
 
 from nexus_extensibility import (CatalogItem, DataSourceContext,
                                  ExtensibilityUtilities, IDataSource, ILogger,
-                                 LogLevel, ReadRequest)
+                                 LogLevel, ReadRequest, ResourceCatalog)
 
 from ._encoder import (JsonEncoder, JsonEncoderOptions, to_camel_case,
                        to_snake_case)
@@ -22,10 +23,10 @@ _lock: Lock = Lock()
 
 class _Logger(ILogger):
 
-    _tcp_comm_socket: socket.socket
+    _comm_socket: socket.socket
 
     def __init__(self, tcp_comm_socket: socket.socket):
-        self._tcp_comm_socket = tcp_comm_socket
+        self._comm_socket = tcp_comm_socket
 
     def log(self, log_level: LogLevel, message: str):
 
@@ -35,45 +36,43 @@ class _Logger(ILogger):
             "params": [log_level.name, message]
         }
         
-        _send_to_server(notification, self._tcp_comm_socket)
+        _send_to_server(notification, self._comm_socket)
 
 class RemoteCommunicator:
     """A remote communicator."""
 
+    _watchdog_timer = time.time()
     _logger: ILogger
+    _data_source: IDataSource
 
-    def __init__(self, data_source: IDataSource, address: str, port: int):
+    def __init__(
+        self, 
+        comm_socket: socket.socket, 
+        data_socket: socket.socket, 
+        get_data_source: Callable[[str], IDataSource]
+    ):
         """
         Initializes a new instance of the RemoteCommunicator.
         
             Args:
-                data_source: The data source.
-                address: The address to connect to.
-                port: The port to connect to.
+                comm_stream: The network stream for communications.
+                data_stream: The network stream for data.
+                get_data_source: A func to get a new data source instance by its type name.
         """
 
-        self._address: str = address
-        self._port: int = port
-        self._tcp_comm_socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._tcp_data_socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._comm_socket = comm_socket
+        self._data_socket = data_socket
+        self._get_data_source = get_data_source
 
-        if not (0 < port and port < 65536):
-            raise Exception(f"The port {port} is not a valid port number.")
+    @property
+    def last_communication(self) -> timedelta:
+        now = time.time()
+        return timedelta(seconds=now - self._watchdog_timer)
 
-        self._data_source: IDataSource = data_source
-
-    async def run(self):
+    async def run(self) -> Awaitable:
         """
         Starts the remoting operation.
         """
-
-        # comm connection
-        self._tcp_comm_socket.connect((self._address, self._port))
-        self._tcp_comm_socket.sendall("comm".encode())
-
-        # data connection
-        self._tcp_data_socket.connect((self._address, self._port))
-        self._tcp_data_socket.sendall("data".encode())
 
         # loop
         while (True):
@@ -81,8 +80,8 @@ class RemoteCommunicator:
             # https://www.jsonrpc.org/specification
 
             # get request message
-            size = self._read_size(self._tcp_comm_socket)
-            json_request = self._tcp_comm_socket.recv(size, socket.MSG_WAITALL)
+            size = self._read_size(self._comm_socket)
+            json_request = self._comm_socket.recv(size, socket.MSG_WAITALL)
 
             if len(json_request) == 0:
                 _shutdown()
@@ -99,6 +98,7 @@ class RemoteCommunicator:
                 if "id" in request:
 
                     try:
+
                         (result, data, status) = await self._process_invocation(request)
 
                         response = {
@@ -124,15 +124,19 @@ class RemoteCommunicator:
             response["id"] = request["id"]
 
             # send response
-            _send_to_server(response, self._tcp_comm_socket)
+            _send_to_server(response, self._comm_socket)
 
             # send data
             if data is not None and status is not None:
-                self._tcp_data_socket.sendall(data)
-                self._tcp_data_socket.sendall(status)
+                self._data_socket.sendall(data)
+                self._data_socket.sendall(status)
 
     async def _process_invocation(self, request: dict[str, Any]) \
-        -> Tuple[Optional[Dict[str, Any]], Optional[memoryview], Optional[memoryview]]:
+        -> Tuple[
+            Optional[Dict[str, Any]], 
+            Optional[memoryview], 
+            Optional[memoryview]
+        ]:
         
         result: Optional[Dict[str, Any]] = None
         data: Optional[memoryview] = None
@@ -155,6 +159,8 @@ class RemoteCommunicator:
             resource_locator_string = cast(str, raw_context["resourceLocator"]) if "resourceLocator" in raw_context else None
             resource_locator = None if resource_locator_string is None else urlparse(resource_locator_string)
 
+            self._data_source = self._get_data_source(type)
+
             system_configuration = raw_context["systemConfiguration"] \
                 if "systemConfiguration" in raw_context else None
 
@@ -164,7 +170,7 @@ class RemoteCommunicator:
             request_configuration = raw_context["requestConfiguration"] \
                 if "requestConfiguration" in raw_context else None
 
-            self._logger = _Logger(self._tcp_comm_socket)
+            self._logger = _Logger(self._comm_socket)
 
             context = DataSourceContext(
                 resource_locator,
@@ -176,6 +182,9 @@ class RemoteCommunicator:
 
         elif method_name == "getCatalogRegistrations":
 
+            if self._data_source is None:
+                raise Exception("The data source context must be set before invoking other methods.")
+
             path = cast(str, params[0])
             registrations = await self._data_source.get_catalog_registrations(path)
 
@@ -183,16 +192,22 @@ class RemoteCommunicator:
                 "registrations": registrations
             }
 
-        elif method_name == "getCatalog":
+        elif method_name == "enrichCatalog":
 
-            catalog_id = params[0]
-            catalog = await self._data_source.get_catalog(catalog_id)
+            if self._data_source is None:
+                raise Exception("The data source context must be set before invoking other methods.")
+
+            original_catalog = JsonEncoder().decode(ResourceCatalog, params[0])
+            catalog = await self._data_source.enrich_catalog(original_catalog)
             
             result = {
                 "catalog": catalog
             }
 
         elif method_name == "getTimeRange":
+
+            if self._data_source is None:
+                raise Exception("The data source context must be set before invoking other methods.")
 
             catalog_id = params[0]
             (begin, end) = await self._data_source.get_time_range(catalog_id)
@@ -204,6 +219,9 @@ class RemoteCommunicator:
 
         elif method_name == "getAvailability":
 
+            if self._data_source is None:
+                raise Exception("The data source context must be set before invoking other methods.")
+
             catalog_id = params[0]
             begin = datetime.strptime(params[1], "%Y-%m-%dT%H:%M:%SZ")
             end = datetime.strptime(params[2], "%Y-%m-%dT%H:%M:%SZ")
@@ -214,6 +232,9 @@ class RemoteCommunicator:
             }
 
         elif method_name == "readSingle":
+
+            if self._data_source is None:
+                raise Exception("The data source context must be set before invoking other methods.")
 
             begin = datetime.strptime(params[0], "%Y-%m-%dT%H:%M:%SZ")
             end = datetime.strptime(params[1], "%Y-%m-%dT%H:%M:%SZ")
@@ -258,15 +279,17 @@ class RemoteCommunicator:
             "params": [resource_path, begin, end]
         }
 
-        _send_to_server(read_data_request, self._tcp_comm_socket)
+        _send_to_server(read_data_request, self._comm_socket)
 
-        size = self._read_size(self._tcp_data_socket)
-        data = self._tcp_data_socket.recv(size, socket.MSG_WAITALL)
+        size = self._read_size(self._data_socket)
+        data = self._data_socket.recv(size, socket.MSG_WAITALL)
 
         if len(data) == 0:
             _shutdown()
 
-        return memoryview(data).cast("d")
+        # 'cast' is required because of https://github.com/python/cpython/issues/126012
+        # see also https://github.com/nexus-main/nexus/issues/184
+        return cast(memoryview, memoryview(data).cast("d"))
 
     def _handle_report_progress(self, progress_value: float):
         pass # not implemented

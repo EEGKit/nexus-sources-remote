@@ -1,12 +1,14 @@
+using Apollo3zehn.PackageManagement.Services;
+using Microsoft.Extensions.Options;
+using Nexus.Extensibility;
+using Nexus.Remoting;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Nexus.Extensibility;
-using Nexus.PackageManagement.Services;
-using Nexus.Remoting;
 
-namespace Nexus.Agent;
+namespace Nexus.Agent.Core;
 
 public class TcpClientPair
 {
@@ -15,6 +17,8 @@ public class TcpClientPair
     public NetworkStream? Data { get; set; }
 
     public RemoteCommunicator? RemoteCommunicator { get; set; }
+
+    public Stopwatch WatchdogTimer = new();
 
     public CancellationTokenSource CancellationTokenSource { get; } = new();
 }
@@ -27,25 +31,29 @@ internal class AgentService
 
     private readonly ConcurrentDictionary<Guid, TcpClientPair> _tcpClientPairs = new();
 
-    private readonly IExtensionHive _extensionHive;
+    private readonly IExtensionHive<IDataSource> _extensionHive;
 
     private readonly IPackageService _packageService;
 
-    private readonly ILogger<AgentService> _agentLogger;
+    private readonly ILogger<AgentService> _logger;
+
+    private readonly SystemOptions _systemOptions;
 
     public AgentService(
-        IExtensionHive extensionHive,
+        IExtensionHive<IDataSource> extensionHive,
         IPackageService packageService,
-        ILogger<AgentService> agentLogger)
+        ILogger<AgentService> logger,
+        IOptions<SystemOptions> systemOptions)
     {
         _extensionHive = extensionHive;
         _packageService = packageService;
-        _agentLogger = agentLogger;
+        _logger = logger;
+        _systemOptions = systemOptions.Value;
     }
 
     public async Task LoadPackagesAsync(CancellationToken cancellationToken)
     {
-        _agentLogger.LogInformation("Load packages");
+        _logger.LogInformation("Load packages");
 
         var packageReferenceMap = await _packageService.GetAllAsync();
         var progress = new Progress<double>();
@@ -59,7 +67,16 @@ internal class AgentService
 
     public Task AcceptClientsAsync(CancellationToken cancellationToken)
     {
-        var tcpListener = new TcpListener(IPAddress.Any, 56145);
+        _logger.LogInformation(
+            "Listening for JSON-RPC communication on {JsonRpcListenAddress}:{JsonRpcListenPort}",
+            _systemOptions.JsonRpcListenAddress, _systemOptions.JsonRpcListenPort
+        );
+
+        var tcpListener = new TcpListener(
+            IPAddress.Parse(_systemOptions.JsonRpcListenAddress),
+            _systemOptions.JsonRpcListenPort
+        );
+
         tcpListener.Start();
 
         // Detect and remove inactivate clients
@@ -71,7 +88,11 @@ internal class AgentService
 
                 foreach (var (key, pair) in _tcpClientPairs)
                 {
-                    if (pair.RemoteCommunicator!.LastCommunication >= CLIENT_TIMEOUT)
+                    var isDead =
+                        (pair.Comm is null || pair.Data is null) && pair.WatchdogTimer.Elapsed > CLIENT_TIMEOUT ||
+                        pair.RemoteCommunicator?.LastCommunication >= CLIENT_TIMEOUT;
+
+                    if (isDead)
                     {
                         if (_tcpClientPairs.TryRemove(key, out var _))
                             pair.CancellationTokenSource.Cancel();
@@ -95,103 +116,76 @@ internal class AgentService
                     var streamReadCts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
                     var networkStream = client.GetStream(); /* no 'using' because it would close the TCP client */
 
-                    // get connection id
+                    // Get connection id
                     var buffer1 = new byte[36];
                     await networkStream.ReadExactlyAsync(buffer1, streamReadCts.Token);
                     var idString = Encoding.UTF8.GetString(buffer1);
 
-                    // get connection type
+                    // Get connection type
                     var buffer2 = new byte[4];
                     await networkStream.ReadExactlyAsync(buffer2, streamReadCts.Token);
                     var typeString = Encoding.UTF8.GetString(buffer2);
 
-                    if (Guid.TryParse(Encoding.UTF8.GetString(buffer1), out var id))
+                    if (!Guid.TryParse(idString, out var id))
                     {
-                        _agentLogger.LogDebug("Accept TCP client with connection ID {ConnectionId} and communication type {CommunicationType}", idString, typeString);
+                        client.Dispose();
+                        return;
+                    }
 
-                        var tcpPairCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    _logger.LogDebug("Accept TCP client with connection ID {ConnectionId} and communication type {CommunicationType}", idString, typeString);
 
-                        // Handle the timeout event
-                        tcpPairCts.Token.Register(() =>
-                        {
-                            // If TCP client pair can be found ...
-                            if (_tcpClientPairs.TryGetValue(id, out var pair))
+                    TcpClientPair pair;
+
+                    // We got a "comm" tcp connection
+                    if (typeString == "comm")
+                    {
+                        pair = _tcpClientPairs.AddOrUpdate(
+                            id, 
+                            addValueFactory: id => new TcpClientPair { Comm = networkStream },
+                            updateValueFactory: (id, pair) => 
                             {
-                                // and if TCP client pair is not yet complete ...
-                                if (pair.Comm is null || pair.Data is null)
-                                {
-                                    // then dispose and remove the clients and the pair
-                                    pair.Comm?.Dispose();
-                                    pair.Data?.Dispose();
-
-                                    _tcpClientPairs.Remove(id, out _);
-                                }
+                                pair.Comm?.Dispose();
+                                pair.Comm = networkStream;
+                                return pair;
                             }
-                        });
+                        );
+                    }
 
-                        // We got a "comm" tcp connection
-                        if (typeString == "comm")
-                        {
-                            _tcpClientPairs.AddOrUpdate(
-                                id, 
-                                addValueFactory: id => new TcpClientPair { Comm = networkStream },
-                                updateValueFactory: (id, pair) => 
-                                {
-                                    pair.Comm?.Dispose();
-                                    pair.Comm = networkStream;
-                                    return pair;
-                                }
-                            );
-                        }
-
-                        // We got a "data" tcp connection
-                        else if (typeString == "data")
-                        {
-                            _tcpClientPairs.AddOrUpdate(
-                                id, 
-                                addValueFactory: id => new TcpClientPair { Data = networkStream },
-                                updateValueFactory: (id, pair) => 
-                                {
-                                    pair.Data?.Dispose();
-                                    pair.Data = networkStream;
-                                    return pair;
-                                }
-                            );
-                        }
-
-                        // Something went wrong, dispose the network stream and return
-                        else
-                        {
-                            networkStream.Dispose();
-                            return;
-                        }
-
-                        var pair = _tcpClientPairs[id];
-
-                        lock (_lock)
-                        {
-                            if (pair.Comm is not null && pair.Data is not null && pair.RemoteCommunicator is null)
+                    // We got a "data" tcp connection
+                    else if (typeString == "data")
+                    {
+                        pair = _tcpClientPairs.AddOrUpdate(
+                            id, 
+                            addValueFactory: id => new TcpClientPair { Data = networkStream },
+                            updateValueFactory: (id, pair) => 
                             {
-                                _agentLogger.LogDebug("Accept remoting client with connection ID {ConnectionId}", id);
-
-                                try
-                                {
-                                    pair.RemoteCommunicator = new RemoteCommunicator(
-                                        pair.Comm,
-                                        pair.Data,
-                                        getDataSource: type => _extensionHive.GetInstance<IDataSource>(type)
-                                    );
-
-                                    _ = pair.RemoteCommunicator.RunAsync(pair.CancellationTokenSource.Token);
-                                }
-                                catch
-                                {
-                                    pair.Comm?.Dispose();
-                                    pair.Data?.Dispose();
-
-                                    throw;
-                                }
+                                pair.Data?.Dispose();
+                                pair.Data = networkStream;
+                                return pair;
                             }
+                        );
+                    }
+
+                    // Something went wrong, dispose the network stream and return
+                    else
+                    {
+                        networkStream.Dispose();
+                        return;
+                    }
+
+                    lock (_lock)
+                    {
+                        if (pair.Comm is not null && pair.Data is not null && pair.RemoteCommunicator is null)
+                        {
+                            _logger.LogDebug("Accept remoting client with connection ID {ConnectionId}", id);
+
+                            pair.RemoteCommunicator = new RemoteCommunicator(
+                                pair.Comm,
+                                pair.Data,
+                                getDataSource: type => _extensionHive.GetInstance(type)
+                            );
+
+                            _ = pair.RemoteCommunicator.RunAsync(pair.CancellationTokenSource.Token);
                         }
                     }
                 });

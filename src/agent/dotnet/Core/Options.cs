@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Nexus.Core;
+namespace Nexus.Agent.Core;
 
 internal abstract record NexusAgentOptions()
 {
@@ -26,6 +26,15 @@ internal abstract record NexusAgentOptions()
     }
 }
 
+internal record SystemOptions : NexusAgentOptions
+{
+    public const string Section = "System";
+
+    public string JsonRpcListenAddress { get; set; } = "0.0.0.0";
+
+    public int JsonRpcListenPort { get; set; } = 56145;
+}
+
 internal record PathsOptions : IPackageManagementPathsOptions
 {
     public const string Section = "Paths";
@@ -34,11 +43,7 @@ internal record PathsOptions : IPackageManagementPathsOptions
 
     public string Packages { get; set; } = Path.Combine(PlatformSpecificRoot, "packages");
 
-    #region Support
-
     private static string PlatformSpecificRoot { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
         ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "nexus-agent")
         : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "nexus-agent");
-
-    #endregion
 }
