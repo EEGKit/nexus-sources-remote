@@ -66,6 +66,9 @@ jobs:
           dotnet publish -c Release -o app /p:GeneratePackage=true src/agent/dotnet/agent.csproj
           python -m build --wheel --outdir artifacts/package --no-isolation src/remoting/python
 
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+
       - name: Test
         run: |
           dotnet test -c Release
