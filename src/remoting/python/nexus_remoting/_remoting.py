@@ -4,7 +4,7 @@ import struct
 import time
 from datetime import datetime, timedelta
 from threading import Lock
-from typing import Any, Callable, Dict, Optional, Tuple, cast
+from typing import Any, Awaitable, Callable, Dict, Optional, Tuple, cast
 from urllib.parse import urlparse
 
 from nexus_extensibility import (CatalogItem, DataSourceContext,
@@ -62,15 +62,14 @@ class RemoteCommunicator:
 
         self._comm_socket = comm_socket
         self._data_socket = data_socket
-
         self._get_data_source = get_data_source
 
     @property
     def last_communication(self) -> timedelta:
-        end = time.time()
-        return timedelta(seconds=end - self._watchdog_timer)
+        now = time.time()
+        return timedelta(seconds=now - self._watchdog_timer)
 
-    async def run(self):
+    async def run(self) -> Awaitable:
         """
         Starts the remoting operation.
         """
@@ -133,7 +132,11 @@ class RemoteCommunicator:
                 self._data_socket.sendall(status)
 
     async def _process_invocation(self, request: dict[str, Any]) \
-        -> Tuple[Optional[Dict[str, Any]], Optional[memoryview], Optional[memoryview]]:
+        -> Tuple[
+            Optional[Dict[str, Any]], 
+            Optional[memoryview], 
+            Optional[memoryview]
+        ]:
         
         result: Optional[Dict[str, Any]] = None
         data: Optional[memoryview] = None

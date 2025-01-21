@@ -19,7 +19,7 @@ public class RemoteTestsFixture : IDisposable
         Initialize = Task.Run(() =>
         {
             var dotnetTask = RunDotnetAgent();
-            var pythonTask = Task.CompletedTask; // RunPythonAgent();
+            var pythonTask = RunPythonAgent();
 
             return Task.WhenAll(dotnetTask, pythonTask);
         });
@@ -83,8 +83,8 @@ public class RemoteTestsFixture : IDisposable
             RedirectStandardError = true
         };
 
-        psi_run.Environment["NEXUSAGENT_System__JsonRpcListenPort"] = "60000";
-        psi_run.Environment["NEXUSAGENT_Paths__Config"] = "../../../.nexus-agent-dotnet/config";
+        psi_run.Environment["NEXUSAGENT_SYSTEM__JSONRPCLISTENPORT"] = "60000";
+        psi_run.Environment["NEXUSAGENT_PATHS__CONFIG"] = "../../../.nexus-agent-dotnet/config";
 
         _runProcess = new Process
         {
@@ -126,17 +126,18 @@ public class RemoteTestsFixture : IDisposable
 
     private async Task RunPythonAgent()
     {
-        var psi_run = new ProcessStartInfo("fastapi")
+        var psi_run = new ProcessStartInfo("/usr/bin/bash")
         {
-            Arguments = $"run main.py",
+            Arguments = $@"-c ""source ../../../.venv/bin/activate; fastapi run main.py""",
             WorkingDirectory="../../../../src/agent/python",
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
 
-        psi_run.Environment["NEXUSAGENT_System__JsonRpcListenPort"] = "60001";
-        psi_run.Environment["NEXUSAGENT_Paths__Config"] = "../../../.nexus-agent-python/config";
+        psi_run.Environment["PYTHONPATH"] = "../../remoting/python";
+        psi_run.Environment["NEXUSAGENT_SYSTEM__JSONRPCLISTENPORT"] = "60001";
+        psi_run.Environment["NEXUSAGENT_PATHS__CONFIG"] = "../../../.nexus-agent-python/config";
 
         _runProcess = new Process
         {
@@ -146,7 +147,7 @@ public class RemoteTestsFixture : IDisposable
 
         _runProcess.OutputDataReceived += (sender, e) =>
         {
-            // File.AppendAllText("/home/vincent/Downloads/output.txt", e.Data + Environment.NewLine);
+            File.AppendAllText("/home/vincent/Downloads/output.txt", e.Data + Environment.NewLine);
 
             if (e.Data is not null && e.Data.Contains("Application startup complete."))
             {
@@ -157,7 +158,7 @@ public class RemoteTestsFixture : IDisposable
 
         _runProcess.ErrorDataReceived += (sender, e) =>
         {
-            // File.AppendAllText("/home/vincent/Downloads/error.txt", e.Data + Environment.NewLine);
+            File.AppendAllText("/home/vincent/Downloads/error.txt", e.Data + Environment.NewLine);
 
             var oldSuccess = _success;
             _success = false;

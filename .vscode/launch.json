@@ -12,19 +12,19 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "NEXUSAGENT_PATHS__Config": "../../../.nexus-agent-dotnet/config"
+                "NEXUSAGENT_PATHS__CONFIG": "../../../.nexus-agent-dotnet/config"
             }
         },
         {
             "name": "Nexus.Agent (python)",
             "type": "debugpy",
             "request": "launch",
-            "module": "uvicorn",
-            "args": ["main:app", "--reload"],
+            "module": "fastapi",
+            "args": ["run"],
             "cwd": "${workspaceFolder}/src/agent/python",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src/remoting/python",
-                "NEXUSAGENT_PATHS__Config": "../../../.nexus-agent-python/config"
+                "NEXUSAGENT_PATHS__CONFIG": "../../../.nexus-agent-python/config"
             }
         }
     ]

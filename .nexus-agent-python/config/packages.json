@@ -2,9 +2,10 @@
   "c05b592f-e198-472d-9902-3f60cf0a6332": {
     "provider": "local",
     "configuration": {
-      "path": "../../../tests/Nexus.Sources.Remote.Tests/dotnet",
+      "path": "../../../tests/Nexus.Sources.Remote.Tests/python",
       "version": "v1",
-      "csproj": "main.py"
+      "module-name": "foo",
+      "entrypoint": "test.py"
     }
   }
 }

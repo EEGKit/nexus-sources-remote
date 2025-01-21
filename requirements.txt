@@ -1,4 +1,4 @@
-apollo3zehn-package-management==1.0.0-b1011
+apollo3zehn-package-management==1.0.0-b1019
 build
 fastapi[standard]
 nexus-api==2.0.0-beta.42
