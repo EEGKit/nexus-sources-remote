@@ -74,8 +74,11 @@ jobs:
 
       - name: Docker Build
         run: |
-          docker build -t nexus-main/nexus-agent:v_next -f src/agent/dotnet/Dockerfile .
-          docker save --output artifacts/images/nexus_agent_image.tar nexus-main/nexus-agent:v_next
+          docker build -t nexus-main/nexus-agent-dotnet:v_next -f src/agent/dotnet/Dockerfile .
+          docker save --output artifacts/images/nexus_agent_dotnet_image.tar nexus-main/nexus-agent-dotnet:v_next
+
+          docker build -t nexus-main/nexus-agent-python:v_next -f src/agent/dotnet/Dockerfile .
+          docker save --output artifacts/images/nexus_agent_python_image.tar nexus-main/nexus-agent-python:v_next
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
@@ -107,7 +110,9 @@ jobs:
           path: artifacts
 
       - name: Docker Load Image
-        run: docker load --input artifacts/images/nexus_agent_image.tar
+        run: |
+          docker load --input artifacts/images/nexus_agent_dotnet_image.tar
+          docker load --input artifacts/images/nexus_agent_python_image.tar
 
       - name: Nuget package (MyGet)
         run: dotnet nuget push 'artifacts/package/release/*.nupkg' --api-key ${MYGET_API_KEY} --source https://www.myget.org/F/apollo3zehn-dev/api/v3/index.json
@@ -128,8 +133,11 @@ jobs:
 
       - name: Docker Push
         run: |
-          docker tag nexus-main/nexus-agent:v_next ghcr.io/nexus-main/nexus-agent:${{ needs.build.outputs.version }}
-          docker push ghcr.io/nexus-main/nexus-agent:${{ needs.build.outputs.version }}
+          docker tag nexus-main/nexus-agent-dotnet:v_next ghcr.io/nexus-main/nexus-agent-dotnet:${{ needs.build.outputs.version }}
+          docker push ghcr.io/nexus-main/nexus-agent-dotnet:${{ needs.build.outputs.version }}
+
+          docker tag nexus-main/nexus-agent-python:v_next ghcr.io/nexus-main/nexus-agent-python:${{ needs.build.outputs.version }}
+          docker push ghcr.io/nexus-main/nexus-agent-python:${{ needs.build.outputs.version }}
 
   publish_release:
 
@@ -152,7 +160,9 @@ jobs:
           path: artifacts
 
       - name: Docker Load Image
-        run: docker load --input artifacts/images/nexus_agent_image.tar
+        run: |
+          docker load --input artifacts/images/nexus_agent_dotnet_image.tar
+          docker load --input artifacts/images/nexus_agent_python_image.tar
 
       - name: GitHub Release Artifacts
         uses: softprops/action-gh-release@v1
@@ -177,5 +187,8 @@ jobs:
 
       - name: Docker Push
         run: |
-          docker tag nexus-main/nexus-agent:v_next nexusmain/nexus-agent:${{ needs.build.outputs.version }}
-          docker push nexusmain/nexus-agent:${{ needs.build.outputs.version }}
+          docker tag nexus-main/nexus-agent-dotnet:v_next nexusmain/nexus-agent-dotnet:${{ needs.build.outputs.version }}
+          docker push nexusmain/nexus-agent-dotnet:${{ needs.build.outputs.version }}
+
+          docker tag nexus-main/nexus-agent-python:v_next nexusmain/nexus-agent-python:${{ needs.build.outputs.version }}
+          docker push nexusmain/nexus-agent-python:${{ needs.build.outputs.version }}

@@ -21,7 +21,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "fastapi",
-            "args": ["run"],
+            "args": ["run", "main.py"],
             "cwd": "${workspaceFolder}/src/agent/python",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src/remoting/python",
