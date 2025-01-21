@@ -12,7 +12,8 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "NEXUSAGENT_PATHS__CONFIG": "../../../.nexus-agent-dotnet/config"
+                "NEXUSAGENT_PATHS__CONFIG": "../../../.nexus-agent-dotnet/config",
+                "NEXUSAGENT_SYSTEM__JSONRPCLISTENPORT": "60000"
             }
         },
         {
@@ -24,7 +25,8 @@
             "cwd": "${workspaceFolder}/src/agent/python",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src/remoting/python",
-                "NEXUSAGENT_PATHS__CONFIG": "../../../.nexus-agent-python/config"
+                "NEXUSAGENT_PATHS__CONFIG": "../../../.nexus-agent-python/config",
+                "NEXUSAGENT_SYSTEM__JSONRPCLISTENPORT": "60001"
             }
         }
     ]

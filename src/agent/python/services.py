@@ -12,11 +12,11 @@ from nexus_remoting._remoting import RemoteCommunicator
 
 
 class TcpClientPair:
-    comm: Optional[socket.socket]
-    data: Optional[socket.socket]
-    remote_communicator: Optional[RemoteCommunicator]
+    comm: Optional[socket.socket] = None
+    data: Optional[socket.socket] = None
+    remote_communicator: Optional[RemoteCommunicator] = None
     watchdog_timer = time.time()
-    task: Optional[asyncio.Task]
+    task: Optional[asyncio.Task] = None
 
 class AgentService:
 
@@ -55,6 +55,7 @@ class AgentService:
         )
 
         tcp_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcp_listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         tcp_listener.bind((self._json_rpc_listen_address, self._json_rpc_listen_port))
         tcp_listener.listen()
 
@@ -92,7 +93,11 @@ class AgentService:
 
             while True:
                 client, _ = await loop.sock_accept(tcp_listener)
-                asyncio.create_task(self._handle_client(client))
+                try:
+                    await self._handle_client(client)
+                    # await loop.create_task(self._handle_client(client))
+                except Exception as ex: 
+                    b = 1
 
         asyncio.create_task(accept_new_clients())
 
@@ -153,4 +158,5 @@ class AgentService:
                     get_data_source=lambda type: self._extension_hive.get_instance(type)
                 )
 
-                pair.task = asyncio.create_task(pair.remote_communicator.run())
+                # pair.task = asyncio.create_task(pair.remote_communicator.run())
+                await pair.remote_communicator.run()                

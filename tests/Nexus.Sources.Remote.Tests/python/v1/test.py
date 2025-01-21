@@ -7,7 +7,8 @@ from urllib.request import url2pathname
 from nexus_extensibility import (CatalogRegistration, DataSourceContext,
                                  IDataSource, LogLevel, NexusDataType,
                                  ReadDataHandler, ReadRequest, Representation,
-                                 ResourceBuilder, ResourceCatalogBuilder)
+                                 ResourceBuilder, ResourceCatalog,
+                                 ResourceCatalogBuilder)
 
 
 class Test(IDataSource):
@@ -39,9 +40,11 @@ class Test(IDataSource):
         else:
             return []
 
-    async def get_catalog(self, catalog_id: str):
+    async def enrich_catalog(self, catalog: ResourceCatalog):
 
-        if (catalog_id == "/A/B/C"):
+        # TODO: return catalog.merge(new_catalog)
+
+        if (catalog.id == "/A/B/C"):
 
             representation = Representation(NexusDataType.INT64, timedelta(seconds=1))
 
@@ -65,7 +68,7 @@ class Test(IDataSource):
                 .add_resources([resource1, resource2]) \
                 .build()
 
-        elif (catalog_id == "/D/E/F"):
+        elif (catalog.id == "/D/E/F"):
 
             representation = Representation(NexusDataType.FLOAT64, timedelta(seconds=1))
 
