@@ -45,7 +45,7 @@ setuptools.setup(
     package_dir={
         "nexus_remoting": os.path.join(source_dir, "nexus_remoting")
     },
-    python_requires=">=3.9",
+    python_requires=">=3.10",
     install_requires=[
         "nexus-extensibility>=2.0.0b42"
     ]
