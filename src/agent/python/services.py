@@ -6,8 +6,7 @@ from datetime import timedelta
 from logging import Logger
 from typing import Optional
 
-from apollo3zehn_package_management._services import (ExtensionHive,
-                                                      PackageService)
+from apollo3zehn_package_management import ExtensionHive, PackageService
 from nexus_remoting._remoting import RemoteCommunicator
 
 

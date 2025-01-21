@@ -3,8 +3,7 @@ import logging
 import sys
 from contextlib import asynccontextmanager
 
-from apollo3zehn_package_management._services import (ExtensionHive,
-                                                      PackageService)
+from apollo3zehn_package_management import ExtensionHive, PackageService
 from fastapi import FastAPI
 from nexus_extensibility import IDataSource
 
