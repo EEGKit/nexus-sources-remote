@@ -30,9 +30,11 @@ async def main():
     await agent_service.load_packages()
     agent_service.accept_clients()
 
+main_task_reference: asyncio.Task[None] # prevents task to be garbage collected
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    asyncio.create_task(main())
+    main_task_reference = asyncio.create_task(main())
     yield
 
 app = FastAPI(lifespan=lifespan)

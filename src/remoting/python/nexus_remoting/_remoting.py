@@ -84,7 +84,7 @@ class RemoteCommunicator:
             json_request = self._comm_socket.recv(size, socket.MSG_WAITALL)
 
             if len(json_request) == 0:
-                _shutdown()
+                raise Exception("The connection has been closed.")
 
             request: Dict[str, Any] = json.loads(json_request)
 
@@ -285,7 +285,7 @@ class RemoteCommunicator:
         data = self._data_socket.recv(size, socket.MSG_WAITALL)
 
         if len(data) == 0:
-            _shutdown()
+            raise Exception("The connection has been closed.")
 
         # 'cast' is required because of https://github.com/python/cpython/issues/126012
         # see also https://github.com/nexus-main/nexus/issues/184
@@ -298,7 +298,7 @@ class RemoteCommunicator:
         size_buffer = current_socket.recv(4, socket.MSG_WAITALL)
 
         if len(size_buffer) == 0:
-            _shutdown()
+            raise Exception("The connection has been closed.")
 
         size = struct.unpack(">I", size_buffer)[0]
         return size
@@ -311,6 +311,3 @@ def _send_to_server(message: Any, current_socket: socket.socket):
     with _lock:
         current_socket.sendall(struct.pack(">I", len(encoded_response)))
         current_socket.sendall(encoded_response)
-
-def _shutdown():
-    exit()

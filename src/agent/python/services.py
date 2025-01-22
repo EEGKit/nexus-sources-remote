@@ -4,7 +4,7 @@ import time
 import uuid
 from datetime import timedelta
 from logging import Logger
-from typing import Optional
+from typing import Any, Awaitable, Coroutine, Optional
 
 from apollo3zehn_package_management import ExtensionHive, PackageService
 from nexus_remoting._remoting import RemoteCommunicator
@@ -21,6 +21,7 @@ class AgentService:
 
     CLIENT_TIMEOUT = timedelta(minutes=1)
 
+    _background_tasks = set[asyncio.Task]()
     _tcp_client_pairs: dict[uuid.UUID, TcpClientPair] = {}
     _lock = asyncio.Lock()
 
@@ -84,7 +85,7 @@ class AgentService:
 
                             del self._tcp_client_pairs[key]
 
-        asyncio.create_task(detect_and_remove_inactive_clients())
+        self._create_task(detect_and_remove_inactive_clients())
         
         async def accept_new_clients():
         
@@ -92,13 +93,9 @@ class AgentService:
 
             while True:
                 client, _ = await loop.sock_accept(tcp_listener)
-                try:
-                    await self._handle_client(client)
-                    # await loop.create_task(self._handle_client(client))
-                except Exception as ex: 
-                    b = 1
+                self._create_task(self._handle_client(client))
 
-        asyncio.create_task(accept_new_clients())
+        self._create_task(accept_new_clients())
 
     async def _handle_client(self, client: socket.socket):
 
@@ -157,5 +154,15 @@ class AgentService:
                     get_data_source=lambda type: self._extension_hive.get_instance(type)
                 )
 
-                # pair.task = asyncio.create_task(pair.remote_communicator.run())
-                await pair.remote_communicator.run()                
+                pair.task = self._create_task(pair.remote_communicator.run())
+
+    def _create_task(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task:
+
+        task = asyncio.create_task(coro)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+
+        return task
+
+
+

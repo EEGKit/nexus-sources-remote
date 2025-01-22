@@ -1,3 +1,7 @@
+## v2.0.0-beta.41 - 2025-01-22
+
+- Fixed some connection handling issues with nexus-agent-python.
+
 ## v2.0.0-beta.40 - 2025-01-21
 
 - Release nexus-agent-dotnet and nexus-agent-python.
