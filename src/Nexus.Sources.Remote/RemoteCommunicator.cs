@@ -10,7 +10,9 @@ namespace Nexus.Sources;
 
 internal class RemoteCommunicator
 {
-    private readonly IPEndPoint _endpoint;
+    private readonly string _host;
+
+    private readonly int _port;
 
     private readonly TcpClient _comm = new();
 
@@ -27,12 +29,14 @@ internal class RemoteCommunicator
     private readonly Func<string, DateTime, DateTime, Task> _readData;
 
     public RemoteCommunicator(
-        IPEndPoint endpoint,
+        string host,
+        int port,
         Func<string, DateTime, DateTime, Task> readData,
         ILogger logger
     )
     {
-        _endpoint = endpoint;
+        _host = host;
+        _port = port;
         _readData = readData;
         _logger = logger;
     }
@@ -42,7 +46,7 @@ internal class RemoteCommunicator
         var id = Guid.NewGuid().ToString();
 
         // comm connection
-        await _comm.ConnectAsync(_endpoint, cancellationToken);
+        await _comm.ConnectAsync(_host, _port, cancellationToken);
         _commStream = _comm.GetStream();
 
         await _commStream.WriteAsync(Encoding.UTF8.GetBytes(id), cancellationToken);
@@ -50,7 +54,7 @@ internal class RemoteCommunicator
         await _commStream.FlushAsync(cancellationToken);
 
         // data connection
-        await _data.ConnectAsync(_endpoint, cancellationToken);
+        await _data.ConnectAsync(_host, _port, cancellationToken);
         _dataStream = _data.GetStream();
         
         await _dataStream.WriteAsync(Encoding.UTF8.GetBytes(id), cancellationToken);

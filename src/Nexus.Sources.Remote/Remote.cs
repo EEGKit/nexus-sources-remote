@@ -51,18 +51,15 @@ public partial class Remote : IDataSource, IDisposable
     {
         Context = context;
 
-        // Endpoint
+        // Host and port
         if (context.ResourceLocator is null || context.ResourceLocator.Scheme != "tcp")
             throw new ArgumentException("The resource locator parameter URI must be set with the 'tcp' scheme.");
 
-        var endpointString = context.ResourceLocator.ToString().Replace("tcp://", "").Replace("/", "");
-        var ipAddress = default(IPAddress);
+        var host = context.ResourceLocator.Host;
+        var port = context.ResourceLocator.Port;
 
-        if (!IPEndPoint.TryParse(endpointString, out var endpoint) && !IPAddress.TryParse(endpointString, out ipAddress))
-            throw new ArgumentException("The resource locator parameter is not a valid IP endpoint.");
-
-        if (endpoint is null)
-            endpoint = new IPEndPoint(ipAddress!, DEFAULT_AGENT_PORT);
+        if (port == -1)
+            port = DEFAULT_AGENT_PORT;
 
         // Type
         var type = Context.SourceConfiguration?.GetStringValue("type") ?? throw new Exception("The data source type is missing.");
@@ -86,7 +83,8 @@ public partial class Remote : IDataSource, IDisposable
 
         // Remote communicator
         _communicator = new RemoteCommunicator(
-            endpoint,
+            host,
+            port,
             HandleReadDataAsync,
             logger
         );

@@ -1,3 +1,7 @@
+## v2.0.0-beta.44 - 2025-01-23
+
+- Allow non-IP addresses as host in Nexus.Sources.Remote
+
 ## v2.0.0-beta.43 - 2025-01-23
 
 - Fix python Docker image
