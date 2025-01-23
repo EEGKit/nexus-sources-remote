@@ -7,7 +7,7 @@ WORKDIR "/app"
 
 RUN apt update &&\
     apt install git -y &&\
-    useradd -u 1654 app &&\
+    useradd -m -u 1654 app &&\
     pip install -r requirements.txt
 
 USER app
