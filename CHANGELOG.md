@@ -1,3 +1,7 @@
+## v2.0.0-beta.43 - 2025-01-23
+
+- Fix python Docker image
+
 ## v2.0.0-beta.42 - 2025-01-23
 
 - Update nexus-extensibility dependency (Python)

@@ -77,7 +77,7 @@ jobs:
           docker build -t nexus-main/nexus-agent-dotnet:v_next -f src/agent/dotnet/Dockerfile .
           docker save --output artifacts/images/nexus_agent_dotnet_image.tar nexus-main/nexus-agent-dotnet:v_next
 
-          docker build -t nexus-main/nexus-agent-python:v_next -f src/agent/dotnet/Dockerfile .
+          docker build -t nexus-main/nexus-agent-python:v_next -f src/agent/python/Dockerfile .
           docker save --output artifacts/images/nexus_agent_python_image.tar nexus-main/nexus-agent-python:v_next
 
       - name: Upload Artifacts
