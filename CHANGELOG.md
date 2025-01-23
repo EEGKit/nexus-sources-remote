@@ -1,3 +1,7 @@
+## v2.0.0-beta.49 - 2025-01-23
+
+- Make resource locator optional
+
 ## v2.0.0-beta.48 - 2025-01-23
 
 - Fix issues in underlying package management dependency
