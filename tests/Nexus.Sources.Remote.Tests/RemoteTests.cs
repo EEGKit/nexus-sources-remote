@@ -25,7 +25,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
     private static readonly Dictionary<string, string> _extensionNameMap = new()
     {
         [DOTNET] = "Nexus.Sources.Test",
-        [PYTHON] = "foo.Test"
+        [PYTHON] = "foo.test.Test"
     };
 
     private readonly RemoteTestsFixture _fixture = fixture;
