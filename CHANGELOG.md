@@ -1,3 +1,7 @@
+## v2.0.0-beta.42 - 2025-01-23
+
+- Update nexus-extensibility dependency (Python)
+
 ## v2.0.0-beta.41 - 2025-01-22
 
 - Fixed some connection handling issues with nexus-agent-python.
