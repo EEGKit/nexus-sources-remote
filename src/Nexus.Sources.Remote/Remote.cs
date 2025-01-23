@@ -66,8 +66,9 @@ public partial class Remote : IDataSource, IDisposable
 
         // Resource locator
         var resourceLocatorString = Context.SourceConfiguration?.GetStringValue("resourceLocator");
+        var resourceLocator = default(Uri);
 
-        if (resourceLocatorString is not null && !Uri.TryCreate(resourceLocatorString, UriKind.Absolute, out var resourceLocator))
+        if (resourceLocatorString is not null && !Uri.TryCreate(resourceLocatorString, UriKind.Absolute, out resourceLocator))
             throw new ArgumentException("The resource locator parameter is not a valid URI.");
 
         // Source configuration
