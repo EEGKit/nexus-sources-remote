@@ -81,7 +81,7 @@ jobs:
           docker save --output artifacts/images/nexus_agent_python_image.tar nexus-main/nexus-agent-python:v_next
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: artifacts
           path: |
@@ -104,7 +104,7 @@ jobs:
     steps:
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: artifacts
           path: artifacts
@@ -154,7 +154,7 @@ jobs:
           python -m pip install twine
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: artifacts
           path: artifacts
