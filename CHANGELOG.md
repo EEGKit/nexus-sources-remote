@@ -1,3 +1,7 @@
+## v2.0.0-beta.48 - 2025-01-23
+
+- Fix issues in underlying package management dependency
+
 ## v2.0.0-beta.47 - 2025-01-23
 
 - Fix issues in underlying package management dependency
