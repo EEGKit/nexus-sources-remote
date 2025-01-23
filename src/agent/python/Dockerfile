@@ -5,7 +5,9 @@ COPY src/agent/python /app
 
 WORKDIR "/app"
 
-RUN useradd -u 1654 app &&\
+RUN apt update &&\
+    apt install git -y &&\
+    useradd -u 1654 app &&\
     pip install -r requirements.txt
 
 USER app
