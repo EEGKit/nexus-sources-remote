@@ -4,8 +4,7 @@
     "configuration": {
       "path": "../../../tests/Nexus.Sources.Remote.Tests/python",
       "version": "v1",
-      "module-name": "foo",
-      "entrypoint": "test.py"
+      "entrypoint": "foo.test"
     }
   }
 }
