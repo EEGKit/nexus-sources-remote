@@ -1,9 +1,8 @@
+import asyncio
 import json
-import socket
 import struct
 import time
 from datetime import datetime, timedelta
-from threading import Lock
 from typing import Any, Awaitable, Callable, Dict, Optional, Tuple, cast
 from urllib.parse import urlparse
 
@@ -19,14 +18,10 @@ _json_encoder_options: JsonEncoderOptions = JsonEncoderOptions(
     property_name_decoder=to_snake_case
 )
 
-_lock: Lock = Lock()
-
 class _Logger(ILogger):
 
-    _comm_socket: socket.socket
-
-    def __init__(self, tcp_comm_socket: socket.socket):
-        self._comm_socket = tcp_comm_socket
+    def __init__(self, tcp_comm_socket: asyncio.StreamWriter):
+        self._comm_writer = tcp_comm_socket
 
     def log(self, log_level: LogLevel, message: str):
 
@@ -36,7 +31,7 @@ class _Logger(ILogger):
             "params": [log_level.name, message]
         }
         
-        _send_to_server(notification, self._comm_socket)
+        asyncio.create_task(_send_to_server(notification, self._comm_writer))
 
 class RemoteCommunicator:
     """A remote communicator."""
@@ -47,8 +42,10 @@ class RemoteCommunicator:
 
     def __init__(
         self, 
-        comm_socket: socket.socket, 
-        data_socket: socket.socket, 
+        comm_reader: asyncio.StreamReader,
+        comm_writer: asyncio.StreamWriter,
+        data_reader: asyncio.StreamReader, 
+        data_writer: asyncio.StreamWriter,
         get_data_source: Callable[[str], IDataSource]
     ):
         """
@@ -60,8 +57,10 @@ class RemoteCommunicator:
                 get_data_source: A func to get a new data source instance by its type name.
         """
 
-        self._comm_socket = comm_socket
-        self._data_socket = data_socket
+        self._comm_reader = comm_reader
+        self._comm_writer = comm_writer
+        self._data_reader = data_reader
+        self._data_writer = data_writer
         self._get_data_source = get_data_source
 
     @property
@@ -80,11 +79,8 @@ class RemoteCommunicator:
             # https://www.jsonrpc.org/specification
 
             # get request message
-            size = self._read_size(self._comm_socket)
-            json_request = self._comm_socket.recv(size, socket.MSG_WAITALL)
-
-            if len(json_request) == 0:
-                raise Exception("The connection has been closed.")
+            size = await self._read_size(self._comm_reader)
+            json_request = await asyncio.wait_for(self._comm_reader.readexactly(size), timeout=60)
 
             request: Dict[str, Any] = json.loads(json_request)
 
@@ -124,12 +120,15 @@ class RemoteCommunicator:
             response["id"] = request["id"]
 
             # send response
-            _send_to_server(response, self._comm_socket)
+            await _send_to_server(response, self._comm_writer)
 
             # send data
             if data is not None and status is not None:
-                self._data_socket.sendall(data)
-                self._data_socket.sendall(status)
+
+                self._data_writer.write(data)
+                self._data_writer.write(status)
+
+                await self._data_writer.drain()
 
     async def _process_invocation(self, request: dict[str, Any]) \
         -> Tuple[
@@ -170,7 +169,7 @@ class RemoteCommunicator:
             request_configuration = raw_context["requestConfiguration"] \
                 if "requestConfiguration" in raw_context else None
 
-            self._logger = _Logger(self._comm_socket)
+            self._logger = _Logger(self._comm_writer)
 
             context = DataSourceContext(
                 resource_locator,
@@ -279,13 +278,10 @@ class RemoteCommunicator:
             "params": [resource_path, begin, end]
         }
 
-        _send_to_server(read_data_request, self._comm_socket)
+        await _send_to_server(read_data_request, self._comm_writer)
 
-        size = self._read_size(self._data_socket)
-        data = self._data_socket.recv(size, socket.MSG_WAITALL)
-
-        if len(data) == 0:
-            raise Exception("The connection has been closed.")
+        size = await self._read_size(self._data_reader)
+        data = await asyncio.wait_for(self._data_reader.readexactly(size), timeout=600)
 
         # 'cast' is required because of https://github.com/python/cpython/issues/126012
         # see also https://github.com/nexus-main/nexus/issues/184
@@ -294,20 +290,20 @@ class RemoteCommunicator:
     def _handle_report_progress(self, progress_value: float):
         pass # not implemented
 
-    def _read_size(self, current_socket: socket.socket) -> int:
-        size_buffer = current_socket.recv(4, socket.MSG_WAITALL)
+    async def _read_size(self, reader: asyncio.StreamReader) -> int:
 
-        if len(size_buffer) == 0:
-            raise Exception("The connection has been closed.")
-
+        size_buffer = await asyncio.wait_for(reader.readexactly(4), timeout=60)
         size = struct.unpack(">I", size_buffer)[0]
+
         return size
 
-def _send_to_server(message: Any, current_socket: socket.socket):
+async def _send_to_server(message: Any, writer: asyncio.StreamWriter):
+
     encoded = JsonEncoder.encode(message, _json_encoder_options)
     json_response = json.dumps(encoded)
     encoded_response = json_response.encode()
 
-    with _lock:
-        current_socket.sendall(struct.pack(">I", len(encoded_response)))
-        current_socket.sendall(encoded_response)
+    writer.write(struct.pack(">I", len(encoded_response)))
+    writer.write(encoded_response)
+
+    await writer.drain()

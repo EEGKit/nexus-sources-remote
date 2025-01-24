@@ -28,7 +28,7 @@ agent_service = AgentService(
 
 async def main():
     await agent_service.load_packages()
-    agent_service.accept_clients()
+    await agent_service.accept_clients()
 
 main_task_reference: asyncio.Task[None] # prevents task to be garbage collected
 
