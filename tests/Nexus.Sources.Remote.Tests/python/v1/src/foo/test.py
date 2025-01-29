@@ -109,7 +109,7 @@ class Test(IDataSource):
         max_file_count = (end - begin).total_seconds() / period_per_file.total_seconds()
         file_paths = glob.glob(url2pathname(self._root) + "/**/*.dat", recursive=True)
         file_names = [os.path.basename(file_path) for file_path in file_paths]
-        date_times = [datetime.strptime(fileName, '%Y-%m-%d_%H-%M-%S.dat') for fileName in file_names]
+        date_times = [datetime.strptime(fileName, "%Y-%m-%d_%H-%M-%S.dat").replace(tzinfo=timezone.utc) for fileName in file_names]
         filtered_date_times = [current for current in date_times if current >= begin and current < end]
         actual_file_count = len(filtered_date_times)
         
@@ -168,7 +168,10 @@ class Test(IDataSource):
                 for file_path in file_paths:
 
                     fileName = os.path.basename(file_path)
-                    file_begin = datetime.strptime(fileName, '%Y-%m-%d_%H-%M-%S.dat')
+
+                    file_begin = datetime \
+                        .strptime(fileName, '%Y-%m-%d_%H-%M-%S.dat') \
+                        .replace(tzinfo=timezone.utc)
                     
                     # if file date/time is within the limits
                     if file_begin >= current_begin and file_begin < end:

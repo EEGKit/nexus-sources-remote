@@ -1,8 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
+﻿using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using Nexus.DataModel;
 using Nexus.Extensibility;
-using System.Text.Json;
 
 namespace Nexus.Sources;
 
@@ -41,40 +42,32 @@ internal class RemoteException(string message, Exception? innerException = defau
 {
 }
 
-internal class JsonElementConverter : Newtonsoft.Json.JsonConverter
+internal class RoundtripDateTimeConverter : JsonConverter<DateTime>
 {
-    internal static JsonSerializerOptions _serializerOptions = new()
+    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
+        if (!DateTime.TryParseExact
+            (
+                reader.GetString(), 
+                "o",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AdjustToUniversal,
+                out var dateTime
+            )
+        )
+        {
+            throw new JsonException();
+        }
 
-    public override bool CanConvert(Type objectType)
-    {
-        var canConvert = objectType == typeof(JsonElement);
-        return canConvert;
+        return dateTime;
     }
 
-    public override object? ReadJson(
-        Newtonsoft.Json.JsonReader reader, 
-        Type objectType, 
-        object? existingValue, 
-        Newtonsoft.Json.JsonSerializer serializer
+    public override void Write(
+        Utf8JsonWriter writer, 
+        DateTime value,
+        JsonSerializerOptions options
     )
     {
-        if (reader.TokenType == Newtonsoft.Json.JsonToken.Null)
-            return default;
-
-        if (reader.TokenType == Newtonsoft.Json.JsonToken.String)
-            return JsonSerializer.SerializeToElement(JToken.Load(reader).ToString());
-
-        var serialized_tmp = JToken.Load(reader).ToString();
-        var deserialized = JsonSerializer.Deserialize<JsonElement>(serialized_tmp);
-        return deserialized;
-    }
-
-    public override void WriteJson(Newtonsoft.Json.JsonWriter writer, object? value, Newtonsoft.Json.JsonSerializer serializer)
-    {
-        var jsonString = JsonSerializer.Serialize(value, _serializerOptions);
-        writer.WriteRawValue(jsonString);
+        writer.WriteStringValue(value.ToString("o", CultureInfo.InvariantCulture));
     }
 }

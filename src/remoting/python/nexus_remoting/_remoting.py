@@ -18,7 +18,11 @@ _json_encoder_options: JsonEncoderOptions = JsonEncoderOptions(
     property_name_decoder=to_snake_case
 )
 
+_json_encoder_options.encoders[datetime] = lambda value: value.strftime("%Y-%m-%dT%H:%M:%S.%f") + "0+00:00"
+
 class _Logger(ILogger):
+
+    _background_tasks = set[asyncio.Task]()
 
     def __init__(self, tcp_comm_socket: asyncio.StreamWriter):
         self._comm_writer = tcp_comm_socket
@@ -31,7 +35,9 @@ class _Logger(ILogger):
             "params": [log_level.name, message]
         }
         
-        asyncio.create_task(_send_to_server(notification, self._comm_writer))
+        task = asyncio.create_task(_send_to_server(notification, self._comm_writer))
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
 
 class RemoteCommunicator:
     """A remote communicator."""
@@ -222,8 +228,8 @@ class RemoteCommunicator:
                 raise Exception("The data source context must be set before invoking other methods.")
 
             catalog_id = params[0]
-            begin = datetime.strptime(params[1], "%Y-%m-%dT%H:%M:%SZ")
-            end = datetime.strptime(params[2], "%Y-%m-%dT%H:%M:%SZ")
+            begin = _json_encoder_options.decoders[datetime](datetime, params[1])
+            end = _json_encoder_options.decoders[datetime](datetime, params[2])
             availability = await self._data_source.get_availability(catalog_id, begin, end)
 
             result = {
@@ -235,8 +241,8 @@ class RemoteCommunicator:
             if self._data_source is None:
                 raise Exception("The data source context must be set before invoking other methods.")
 
-            begin = datetime.strptime(params[0], "%Y-%m-%dT%H:%M:%SZ")
-            end = datetime.strptime(params[1], "%Y-%m-%dT%H:%M:%SZ")
+            begin = _json_encoder_options.decoders[datetime](datetime, params[0])
+            end = _json_encoder_options.decoders[datetime](datetime, params[1])
             original_resource_name = params[2]
             catalog_item = JsonEncoder.decode(CatalogItem, params[3], _json_encoder_options)
             (data, status) = ExtensibilityUtilities.create_buffers(catalog_item.representation, begin, end)
@@ -275,7 +281,11 @@ class RemoteCommunicator:
         read_data_request = {
             "jsonrpc": "2.0",
             "method": "readData",
-            "params": [resource_path, begin, end]
+            "params": [
+                resource_path, 
+                begin, 
+                end
+            ]
         }
 
         await _send_to_server(read_data_request, self._comm_writer)

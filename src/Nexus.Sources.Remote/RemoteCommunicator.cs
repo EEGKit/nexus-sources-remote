@@ -1,9 +1,8 @@
-﻿using System.Net;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 using StreamJsonRpc;
 
 namespace Nexus.Sources;
@@ -61,18 +60,18 @@ internal class RemoteCommunicator
         await _dataStream.WriteAsync(Encoding.UTF8.GetBytes("data"), cancellationToken);
         await _dataStream.FlushAsync(cancellationToken);
 
-        var formatter = new JsonMessageFormatter()
+        var options = new JsonSerializerOptions()
         {
-            JsonSerializer = {
-                ContractResolver = new DefaultContractResolver
-                {
-                    NamingStrategy = new CamelCaseNamingStrategy()
-                }
-            }
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-        formatter.JsonSerializer.Converters.Add(new JsonElementConverter());
-        formatter.JsonSerializer.Converters.Add(new StringEnumConverter());
+        options.Converters.Add(new JsonStringEnumConverter());
+        options.Converters.Add(new RoundtripDateTimeConverter());
+
+        var formatter = new SystemTextJsonFormatter()
+        {
+            JsonSerializerOptions = options
+        };
 
         var messageHandler = new LengthHeaderMessageHandler(_commStream, _commStream, formatter);
         var jsonRpc = new JsonRpc(messageHandler);

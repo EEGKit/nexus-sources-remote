@@ -172,7 +172,7 @@ public class RemoteCommunicator
                 response.Add("jsonrpc", "2.0");
 
                 var id = request.TryGetProperty("id", out var element2)
-                    ? element2.ToString()
+                    ? element2.GetInt32()
                     : throw new Exception("Unable to read the request message id.");
 
                 response.Add("id", id);
@@ -289,8 +289,8 @@ public class RemoteCommunicator
 
             result = new JsonObject()
             {
-                ["begin"] = begin,
-                ["end"] = end
+                ["begin"] = begin.ToString("o", CultureInfo.InvariantCulture),
+                ["end"] = end.ToString("o", CultureInfo.InvariantCulture)
             };
         }
 
@@ -302,10 +302,10 @@ public class RemoteCommunicator
             var catalogId = @params[0].GetString()!;
 
             var beginString = @params[1].GetString()!;
-            var begin = DateTime.ParseExact(beginString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+            var begin = DateTime.ParseExact(beginString, "o", CultureInfo.InvariantCulture);
 
             var endString = @params[2].GetString()!;
-            var end = DateTime.ParseExact(endString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+            var end = DateTime.ParseExact(endString, "o", CultureInfo.InvariantCulture);
 
             var availability = await _dataSource.GetAvailabilityAsync(catalogId, begin, end, cancellationToken);
 
@@ -321,10 +321,10 @@ public class RemoteCommunicator
                 throw new Exception("The data source context must be set before invoking other methods.");
 
             var beginString = @params[0].GetString()!;
-            var begin = DateTime.ParseExact(beginString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture).ToUniversalTime();
+            var begin = DateTime.ParseExact(beginString, "o", CultureInfo.InvariantCulture).ToUniversalTime();
 
             var endString = @params[1].GetString()!;
-            var end = DateTime.ParseExact(endString, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture).ToUniversalTime();
+            var end = DateTime.ParseExact(endString, "o", CultureInfo.InvariantCulture).ToUniversalTime();
 
             var originalResourceName = @params[2].GetString()!;
 
@@ -377,7 +377,13 @@ public class RemoteCommunicator
         {
             ["jsonrpc"] = "2.0",
             ["method"] = "readData",
-            ["params"] = new JsonArray(resourcePath, begin, end)
+            ["params"] = new JsonArray
+                (
+                    resourcePath, 
+                    begin.ToString("o", CultureInfo.InvariantCulture), 
+                    end.ToString("o", CultureInfo.InvariantCulture
+                )
+            )
         };
 
         _logger.LogDebug("Read resource path {ResourcePath} from Nexus", resourcePath);
@@ -419,6 +425,7 @@ internal static class Utilities
         };
 
         Options.Converters.Add(new JsonStringEnumConverter());
+        Options.Converters.Add(new RoundtripDateTimeConverter());
     }
 
     public static JsonSerializerOptions Options { get; }
@@ -476,4 +483,34 @@ internal class CastMemoryManager<TFrom, TTo>(Memory<TFrom> from) : MemoryManager
     public override MemoryHandle Pin(int elementIndex = 0) => throw new NotSupportedException("CastMemoryManager does not support pinning.");
 
     public override void Unpin() => throw new NotSupportedException("CastMemoryManager does not support unpinning.");
+}
+
+internal class RoundtripDateTimeConverter : JsonConverter<DateTime>
+{
+    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (!DateTime.TryParseExact
+            (
+                reader.GetString(), 
+                "o",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AdjustToUniversal,
+                out var dateTime
+            )
+        )
+        {
+            throw new JsonException();
+        }
+
+        return dateTime;
+    }
+
+    public override void Write(
+        Utf8JsonWriter writer, 
+        DateTime value,
+        JsonSerializerOptions options
+    )
+    {
+        writer.WriteStringValue(value.ToString("o", CultureInfo.InvariantCulture));
+    }
 }

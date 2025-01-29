@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Nexus.DataModel;
 using Nexus.Extensibility;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Xunit;
@@ -111,9 +110,6 @@ public class RemoteTests(RemoteTestsFixture fixture)
     [InlineData(PYTHON)] 
     public async Task CanReadFullDay(string language)
     {
-        // TODO fix this
-        var complexData = true;
-
         await _fixture.Initialize;
 
         var dataSource = new Remote() as IDataSource;
@@ -139,30 +135,22 @@ public class RemoteTests(RemoteTestsFixture fixture)
         var expectedData = new long[length];
         var expectedStatus = new byte[length];
 
-        if (complexData)
+        void GenerateData(DateTimeOffset dateTime)
         {
-            void GenerateData(DateTimeOffset dateTime)
-            {
-                var data = Enumerable.Range(0, 600)
-                    .Select(value => dateTime.Add(TimeSpan.FromSeconds(value)).ToUnixTimeSeconds())
-                    .ToArray();
+            var data = Enumerable.Range(0, 600)
+                .Select(value => dateTime.Add(TimeSpan.FromSeconds(value)).ToUnixTimeSeconds())
+                .ToArray();
 
-                var offset = (int)(dateTime - begin).TotalSeconds;
-                data.CopyTo(expectedData.AsSpan()[offset..]);
-                expectedStatus.AsSpan().Slice(offset, 600).Fill(1);
-            }
+            var offset = (int)(dateTime - begin).TotalSeconds;
+            data.CopyTo(expectedData.AsSpan()[offset..]);
+            expectedStatus.AsSpan().Slice(offset, 600).Fill(1);
+        }
 
-            GenerateData(new DateTimeOffset(2019, 12, 31, 12, 00, 0, 0, TimeSpan.Zero));
-            GenerateData(new DateTimeOffset(2019, 12, 31, 12, 20, 0, 0, TimeSpan.Zero));
-            GenerateData(new DateTimeOffset(2020, 01, 01, 00, 00, 0, 0, TimeSpan.Zero));
-            GenerateData(new DateTimeOffset(2020, 01, 02, 09, 40, 0, 0, TimeSpan.Zero));
-            GenerateData(new DateTimeOffset(2020, 01, 02, 09, 50, 0, 0, TimeSpan.Zero));
-        }
-        else
-        {
-            MemoryMarshal.AsBytes(expectedData.AsSpan()).Fill((byte)'d');
-            expectedStatus.AsSpan().Fill((byte)'s');
-        }
+        GenerateData(new DateTimeOffset(2019, 12, 31, 12, 00, 0, 0, TimeSpan.Zero));
+        GenerateData(new DateTimeOffset(2019, 12, 31, 12, 20, 0, 0, TimeSpan.Zero));
+        GenerateData(new DateTimeOffset(2020, 01, 01, 00, 00, 0, 0, TimeSpan.Zero));
+        GenerateData(new DateTimeOffset(2020, 01, 02, 09, 40, 0, 0, TimeSpan.Zero));
+        GenerateData(new DateTimeOffset(2020, 01, 02, 09, 50, 0, 0, TimeSpan.Zero));
 
         var request = new ReadRequest(resource.Id, catalogItem, data, status);
         await dataSource.ReadAsync(begin, end, [request], default!, new Progress<double>(), CancellationToken.None);
@@ -170,6 +158,45 @@ public class RemoteTests(RemoteTestsFixture fixture)
 
         Assert.True(expectedData.SequenceEqual(longData.ToArray()));
         Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
+    }
+
+    [Theory]
+    [InlineData(DOTNET)] 
+    [InlineData(PYTHON)] 
+    public async Task CanRoundtripDateTime(string language)
+    {
+        // Arrange
+        await _fixture.Initialize;
+
+        var dataSource = new Remote() as IDataSource;
+        var context = CreateContext(language);
+
+        await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
+
+        var begin = new DateTime(2020, 01, 01, 0, 0, 0, 20, DateTimeKind.Utc);
+        var end = new DateTime(2020, 01, 01, 0, 0, 0, 40, DateTimeKind.Utc);
+        var catalog = await dataSource.EnrichCatalogAsync(new ResourceCatalog("/A/B/C"), CancellationToken.None);
+        var resource = catalog.Resources![0];
+        var representation = resource.Representations![0];
+
+        var catalogItem = new CatalogItem(
+            catalog with { Resources = default! },
+            resource with { Representations = default! },
+            representation,
+            default);
+
+        var (data, status) = ExtensibilityUtilities.CreateBuffers(representation, begin, end);
+        var request = new ReadRequest(resource.Id, catalogItem, data, status);
+
+        // Act
+        await dataSource.ReadAsync(
+            begin,
+            end,
+            [request],
+            default!,
+            new Progress<double>(),
+            CancellationToken.None
+        );
     }
 
     [Theory]
