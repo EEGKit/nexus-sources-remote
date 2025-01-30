@@ -1,3 +1,7 @@
+## v2.0.0-beta.52 - 2025-01-30
+
+- Fix version
+
 ## v2.0.0-beta.51 - 2025-01-30
 
 - Fix rountrip of datetime values
