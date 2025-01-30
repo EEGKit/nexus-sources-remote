@@ -212,6 +212,9 @@ public class RemoteTests(RemoteTestsFixture fixture)
 
         await dataSource.SetContextAsync(context, loggerMock.Object, CancellationToken.None);
 
+        /* Ensure all log messages have arrived */
+        await Task.Delay(TimeSpan.FromSeconds(1));
+
         loggerMock.Verify(
             x => x.Log(
                 It.Is<LogLevel>(logLevel => logLevel == LogLevel.Information),

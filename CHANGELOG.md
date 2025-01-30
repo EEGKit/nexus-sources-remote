@@ -1,3 +1,7 @@
+## v2.0.0-beta.51 - 2025-01-30
+
+- Fix rountrip of datetime values
+
 ## v2.0.0-beta.50 - 2025-01-24
 
 - Make Python TCP server fully async
