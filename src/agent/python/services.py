@@ -155,7 +155,7 @@ class AgentService:
                     pair.comm_writer,
                     pair.data_reader,
                     pair.data_writer,
-                    get_data_source=lambda type: cast(IDataSource, self._extension_hive.get_extension_type(type)())
+                    get_data_source=lambda typeName: cast(IDataSource, self._extension_hive.get_extension_type(typeName)())
                 )
 
                 pair.task = self._create_task(pair.remote_communicator.run())
