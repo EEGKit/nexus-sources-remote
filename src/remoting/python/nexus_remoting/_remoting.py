@@ -18,7 +18,8 @@ _json_encoder_options: JsonEncoderOptions = JsonEncoderOptions(
     property_name_decoder=to_snake_case
 )
 
-_json_encoder_options.encoders[datetime] = lambda value: value.strftime("%Y-%m-%dT%H:%M:%S.%f") + "0+00:00"
+#                                                                                               zfill(26) ensures leading zeros when year is < 1000
+_json_encoder_options.encoders[datetime] = lambda value: value.strftime("%Y-%m-%dT%H:%M:%S.%f").zfill(26) + "0+00:00"
 
 class _Logger(ILogger):
 
