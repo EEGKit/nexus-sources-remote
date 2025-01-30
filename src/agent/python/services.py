@@ -4,9 +4,10 @@ import time
 import uuid
 from datetime import timedelta
 from logging import Logger
-from typing import Any, Coroutine, Optional
+from typing import Any, Coroutine, Optional, cast
 
 from apollo3zehn_package_management import ExtensionHive, PackageService
+from nexus_extensibility import IDataSource
 from nexus_remoting._remoting import RemoteCommunicator
 
 
@@ -154,7 +155,7 @@ class AgentService:
                     pair.comm_writer,
                     pair.data_reader,
                     pair.data_writer,
-                    get_data_source=lambda type: self._extension_hive.get_instance(type)
+                    get_data_source=lambda type: cast(IDataSource, self._extension_hive.get_extension_type(type)())
                 )
 
                 pair.task = self._create_task(pair.remote_communicator.run())

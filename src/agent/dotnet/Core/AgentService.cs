@@ -182,7 +182,7 @@ internal class AgentService
                             pair.RemoteCommunicator = new RemoteCommunicator(
                                 pair.Comm,
                                 pair.Data,
-                                getDataSource: type => _extensionHive.GetInstance(type)
+                                getDataSource: type => (IDataSource)Activator.CreateInstance(_extensionHive.GetExtensionType(type))!
                             );
 
                             _ = pair.RemoteCommunicator.RunAsync(pair.CancellationTokenSource.Token);
