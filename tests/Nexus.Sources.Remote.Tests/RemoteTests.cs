@@ -32,12 +32,37 @@ public class RemoteTests(RemoteTestsFixture fixture)
     [Theory]
     [InlineData(DOTNET)] 
     [InlineData(PYTHON)] 
+    public async Task CanUpgradeSourceConfiguration(string language)
+    {
+        await _fixture.Initialize;
+
+        // Arrange
+        var configuration = CreateSettings(language);
+
+        // Act
+        var upgradedConfiguration = await Remote.UpgradeSourceConfigurationAsync(
+            JsonSerializer.SerializeToElement(configuration, Utilities.JsonSerializerOptions),
+            CancellationToken.None
+        );
+
+        // Assert
+        var remoteConfiguration = upgradedConfiguration.GetProperty("remoteConfiguration");
+
+        Assert.Equal(
+            remoteConfiguration.GetProperty("logMessage").GetString(),
+            remoteConfiguration.GetProperty("foo").GetString()
+        );
+    }
+
+    [Theory]
+    [InlineData(DOTNET)] 
+    [InlineData(PYTHON)] 
     public async Task ProvidesCatalog(string language)
     {
         await _fixture.Initialize;
         
         // Arrange
-        var dataSource = new Remote() as IDataSource;
+        var dataSource = new Remote() as IDataSource<RemoteSettings>;
         var context = CreateContext(language);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
@@ -72,7 +97,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
     {
         await _fixture.Initialize;
 
-        var dataSource = new Remote() as IDataSource;
+        var dataSource = new Remote() as IDataSource<RemoteSettings>;
         var context = CreateContext(language);
 
         var expectedBegin = new DateTime(2019, 12, 31, 12, 00, 00, DateTimeKind.Utc);
@@ -93,7 +118,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
     {
         await _fixture.Initialize;
 
-        var dataSource = new Remote() as IDataSource;
+        var dataSource = new Remote() as IDataSource<RemoteSettings>;
         var context = CreateContext(language);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
@@ -112,7 +137,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
     {
         await _fixture.Initialize;
 
-        var dataSource = new Remote() as IDataSource;
+        var dataSource = new Remote() as IDataSource<RemoteSettings>;
         var context = CreateContext(language);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
@@ -168,7 +193,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
         // Arrange
         await _fixture.Initialize;
 
-        var dataSource = new Remote() as IDataSource;
+        var dataSource = new Remote() as IDataSource<RemoteSettings>;
         var context = CreateContext(language);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
@@ -207,7 +232,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
         await _fixture.Initialize;
 
         var loggerMock = new Mock<ILogger>();
-        var dataSource = new Remote() as IDataSource;
+        var dataSource = new Remote() as IDataSource<RemoteSettings>;
         var context = CreateContext(language);
 
         await dataSource.SetContextAsync(context, loggerMock.Object, CancellationToken.None);
@@ -234,7 +259,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
     {
         await _fixture.Initialize;
         
-        var dataSource = new Remote() as IDataSource;
+        var dataSource = new Remote() as IDataSource<RemoteSettings>;
         var context = CreateContext(language);
 
         await dataSource.SetContextAsync(context, NullLogger.Instance, CancellationToken.None);
@@ -285,29 +310,24 @@ public class RemoteTests(RemoteTestsFixture fixture)
         Assert.True(expectedStatus.SequenceEqual(status.ToArray()));
     }
 
-    private static DataSourceContext CreateContext(string language)
+    private static DataSourceContext<RemoteSettings> CreateContext(string language)
+    {
+        return new DataSourceContext<RemoteSettings>(
+            ResourceLocator: new Uri("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA")),
+            SourceConfiguration: CreateSettings(language),
+            RequestConfiguration: default
+        );
+    }
+
+    private static RemoteSettings CreateSettings(string language)
     {
         var port = _portMap[language];
         var extensionName = _extensionNameMap[language];
 
-        return new DataSourceContext(
-            ResourceLocator: new Uri($"tcp://127.0.0.1:{port}"),
-            SystemConfiguration: new Dictionary<string, JsonElement>()
-            {
-                [typeof(Remote).FullName!] = JsonSerializer.SerializeToElement(new JsonObject()
-                {
-                    ["templates"] = new JsonObject()
-                    {
-                        ["local"] = "{command}",
-                    }
-                })
-            },
-            SourceConfiguration: new Dictionary<string, JsonElement>()
-            {
-                ["type"] = JsonSerializer.SerializeToElement(extensionName),
-                ["resourceLocator"] = JsonSerializer.SerializeToElement("file:///" + Path.Combine(Directory.GetCurrentDirectory(), "TESTDATA"))
-            },
-            RequestConfiguration: default
+        return new RemoteSettings(
+            RemoteUrl: new Uri($"tcp://127.0.0.1:{port}"),
+            RemoteType: extensionName,
+            RemoteConfiguration: JsonSerializer.SerializeToElement(new TestSettings("Logging works!"), JsonSerializerOptions.Web)
         );
     }
 }

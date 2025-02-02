@@ -1,13 +1,11 @@
 ﻿using System.Net.Sockets;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using StreamJsonRpc;
 
 namespace Nexus.Sources;
 
-internal class RemoteCommunicator
+internal class RemoteCommunicator : IDisposable
 {
     private readonly string _host;
 
@@ -60,17 +58,9 @@ internal class RemoteCommunicator
         await _dataStream.WriteAsync(Encoding.UTF8.GetBytes("data"), cancellationToken);
         await _dataStream.FlushAsync(cancellationToken);
 
-        var options = new JsonSerializerOptions()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
-
-        options.Converters.Add(new JsonStringEnumConverter());
-        options.Converters.Add(new RoundtripDateTimeConverter());
-
         var formatter = new SystemTextJsonFormatter()
         {
-            JsonSerializerOptions = options
+            JsonSerializerOptions = Utilities.JsonSerializerOptions
         };
 
         var messageHandler = new LengthHeaderMessageHandler(_commStream, _commStream, formatter);

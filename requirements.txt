@@ -2,6 +2,6 @@
 apollo3zehn-package-management==1.0.0-b5
 build
 fastapi[standard]
-nexus-extensibility==2.0.0-beta.44
+nexus-extensibility==2.0.0-b48
 pytest-asyncio
 wheel

@@ -8,7 +8,8 @@ from urllib.parse import urlparse
 
 from nexus_extensibility import (CatalogItem, DataSourceContext,
                                  ExtensibilityUtilities, IDataSource, ILogger,
-                                 LogLevel, ReadRequest, ResourceCatalog)
+                                 IUpgradableDataSource, LogLevel, ReadRequest,
+                                 ResourceCatalog)
 
 from ._encoder import (JsonEncoder, JsonEncoderOptions, to_camel_case,
                        to_snake_case)
@@ -45,6 +46,7 @@ class RemoteCommunicator:
 
     _watchdog_timer = time.time()
     _logger: ILogger
+    _source_type_name: str
     _data_source: IDataSource
 
     def __init__(
@@ -53,7 +55,7 @@ class RemoteCommunicator:
         comm_writer: asyncio.StreamWriter,
         data_reader: asyncio.StreamReader, 
         data_writer: asyncio.StreamWriter,
-        get_data_source: Callable[[str], IDataSource]
+        get_data_source_type: Callable[[str], type]
     ):
         """
         Initializes a new instance of the RemoteCommunicator.
@@ -61,14 +63,14 @@ class RemoteCommunicator:
             Args:
                 comm_stream: The network stream for communications.
                 data_stream: The network stream for data.
-                get_data_source: A func to get a new data source instance by its type name.
+                get_data_source_type: A func to get a new data source instance by its type name.
         """
 
         self._comm_reader = comm_reader
         self._comm_writer = comm_writer
         self._data_reader = data_reader
         self._data_writer = data_writer
-        self._get_data_source = get_data_source
+        self._get_data_source_type = get_data_source_type
 
     @property
     def last_communication(self) -> timedelta:
@@ -139,39 +141,61 @@ class RemoteCommunicator:
 
     async def _process_invocation(self, request: dict[str, Any]) \
         -> Tuple[
-            Optional[Dict[str, Any]], 
+            Optional[Any], 
             Optional[memoryview], 
             Optional[memoryview]
         ]:
         
-        result: Optional[Dict[str, Any]] = None
+        result: Optional[Any] = None
         data: Optional[memoryview] = None
         status: Optional[memoryview] = None
 
         method_name = request["method"]
         params = cast(list[Any], request["params"])
 
-        if method_name == "getApiVersion":
+        if method_name == "initialize":
+            
+            self._source_type_name = params[0]
+            result = 1 # API version
 
-            result = {
-                "apiVersion": 1
-            }
+        elif method_name == "upgradeSourceConfiguration":
+
+            if self._source_type_name is None:
+                raise Exception("The connection must be initialized with a type before invoking other methods.")
+            
+            data_source_type = self._get_data_source_type(self._source_type_name)
+            configuration = params[0]
+
+            if issubclass(data_source_type, IUpgradableDataSource):
+
+                upgraded_configuration = await data_source_type.upgrade_source_configuration(configuration)
+                result = upgraded_configuration
+
+            else:
+                result = configuration
 
         elif method_name == "setContext":
 
-            # TODO: make use of the type (see C# implementation)
-            type = params[0]
-            raw_context = params[1]
+            if self._source_type_name is None:
+                raise Exception("The connection must be initialized with a type before invoking other methods.")
+
+            raw_context = params[0]
             resource_locator_string = cast(str, raw_context["resourceLocator"]) if "resourceLocator" in raw_context else None
             resource_locator = None if resource_locator_string is None else urlparse(resource_locator_string)
 
-            self._data_source = self._get_data_source(type)
+            self._data_source = cast(IDataSource, self._get_data_source_type(self._source_type_name)())
 
-            system_configuration = raw_context["systemConfiguration"] \
-                if "systemConfiguration" in raw_context else None
+            # TODO: Python 3.12: https://stackoverflow.com/a/78818079/1636629
+            configuration_type = self._data_source.__class__.__orig_bases__[0].__args__[0] # pyright: ignore
 
-            source_configuration = raw_context["sourceConfiguration"] \
+            encoded_source_configuration = raw_context["sourceConfiguration"] \
                 if "sourceConfiguration" in raw_context else None
+
+            source_configuration = JsonEncoder.decode(
+                configuration_type, 
+                encoded_source_configuration, 
+                _json_encoder_options
+            )
 
             request_configuration = raw_context["requestConfiguration"] \
                 if "requestConfiguration" in raw_context else None
@@ -180,9 +204,9 @@ class RemoteCommunicator:
 
             context = DataSourceContext(
                 resource_locator,
-                system_configuration,
                 source_configuration,
-                request_configuration)
+                request_configuration
+            )
 
             await self._data_source.set_context(context, self._logger)
 
@@ -194,9 +218,7 @@ class RemoteCommunicator:
             path = cast(str, params[0])
             registrations = await self._data_source.get_catalog_registrations(path)
 
-            result = {
-                "registrations": registrations
-            }
+            result = registrations
 
         elif method_name == "enrichCatalog":
 
@@ -206,9 +228,7 @@ class RemoteCommunicator:
             original_catalog = JsonEncoder().decode(ResourceCatalog, params[0])
             catalog = await self._data_source.enrich_catalog(original_catalog)
             
-            result = {
-                "catalog": catalog
-            }
+            result = catalog
 
         elif method_name == "getTimeRange":
 
@@ -216,12 +236,9 @@ class RemoteCommunicator:
                 raise Exception("The data source context must be set before invoking other methods.")
 
             catalog_id = params[0]
-            (begin, end) = await self._data_source.get_time_range(catalog_id)
+            time_range = await self._data_source.get_time_range(catalog_id)
 
-            result = {
-                "begin": begin,
-                "end": end,
-            }
+            result = time_range
 
         elif method_name == "getAvailability":
 
@@ -233,9 +250,7 @@ class RemoteCommunicator:
             end = _json_encoder_options.decoders[datetime](datetime, params[2])
             availability = await self._data_source.get_availability(catalog_id, begin, end)
 
-            result = {
-                "availability": availability
-            }
+            result = availability
 
         elif method_name == "readSingle":
 

@@ -1,23 +1,36 @@
 import glob
 import os
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Callable
+from typing import Any, Awaitable, Callable
 from urllib.request import url2pathname
 
-from nexus_extensibility import (CatalogRegistration, DataSourceContext,
-                                 IDataSource, LogLevel, NexusDataType,
-                                 ReadDataHandler, ReadRequest, Representation,
-                                 ResourceBuilder, ResourceCatalog,
-                                 ResourceCatalogBuilder)
+from nexus_extensibility import (CatalogRegistration, CatalogTimeRange,
+                                 DataSourceContext, IDataSource,
+                                 IUpgradableDataSource, LogLevel,
+                                 NexusDataType, ReadDataHandler, ReadRequest,
+                                 Representation, ResourceBuilder,
+                                 ResourceCatalog, ResourceCatalogBuilder)
 
 
-class Test(IDataSource):
+@dataclass(frozen=True)
+class TestSettings():
+    log_message: str
+
+class Test(IDataSource[TestSettings], IUpgradableDataSource):
     
     _root: str
 
+    @staticmethod
+    async def upgrade_source_configuration(configuration: Any) -> Any:
+
+        configuration["foo"] = configuration["logMessage"]
+        
+        return configuration
+
     async def set_context(self, context, logger):
         
-        self._context: DataSourceContext = context
+        self._context: DataSourceContext[TestSettings] = context
 
         if (context.resource_locator is None or context.resource_locator.path is None):
             raise Exception(f"No resource locator provided.")
@@ -27,7 +40,7 @@ class Test(IDataSource):
 
         self._root = context.resource_locator.path
 
-        logger.log(LogLevel.Information, "Logging works!")
+        logger.log(LogLevel.Information, self._context.source_configuration.log_message)
 
     async def get_catalog_registrations(self, path: str):
 
@@ -98,7 +111,7 @@ class Test(IDataSource):
         begin = date_times[0].replace(tzinfo = timezone.utc)
         end = date_times[-1].replace(tzinfo = timezone.utc)
 
-        return (begin, end)
+        return CatalogTimeRange(begin, end)
 
     async def get_availability(self, catalog_id: str, begin: datetime, end: datetime):
 

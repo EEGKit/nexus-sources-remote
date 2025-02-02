@@ -1,21 +1,43 @@
 ﻿using System.Buffers;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Nexus.DataModel;
 using Nexus.Extensibility;
 
 namespace Nexus.Sources;
 
+public record TestSettings(
+    string LogMessage
+);
+
 /* Note: Inherit from StructuredFileDataSource would be possible 
  * but collides with ReadAndModifyNexusData method
  */
-
-public class Test : IDataSource
+public class Test : IDataSource<TestSettings>, IUpgradableDataSource
 {
-    private DataSourceContext _context = default!;
+    private DataSourceContext<TestSettings> _context = default!;
 
-    public Task SetContextAsync(DataSourceContext context, ILogger logger, CancellationToken cancellationToken)
+    public static Task<JsonElement> UpgradeSourceConfigurationAsync(
+        JsonElement configuration,
+        CancellationToken cancellationToken
+    )
+    {
+        var jsonNode = JsonSerializer.SerializeToNode(configuration)!;
+
+        jsonNode["foo"] = jsonNode["logMessage"]!.DeepClone();
+
+        var upgradedConfiguration = JsonSerializer.SerializeToElement(jsonNode, JsonSerializerOptions.Web);
+
+        return Task.FromResult(upgradedConfiguration);
+    }
+
+    public Task SetContextAsync(
+        DataSourceContext<TestSettings> context, 
+        ILogger logger, 
+        CancellationToken cancellationToken
+    )
     {
         _context = context;
 
@@ -25,7 +47,8 @@ public class Test : IDataSource
         if (context.ResourceLocator.Scheme != "file")
             throw new Exception($"Expected 'file' URI scheme, but got '{context.ResourceLocator.Scheme}'.");
 
-        logger.LogInformation("Logging works!");
+        logger.LogInformation(context.SourceConfiguration.LogMessage);
+        
         return Task.CompletedTask;
     }
 
@@ -89,7 +112,7 @@ public class Test : IDataSource
         return Task.FromResult(catalog);
     }
 
-    public Task<(DateTime Begin, DateTime End)> GetTimeRangeAsync(string catalogId, CancellationToken cancellationToken)
+    public Task<CatalogTimeRange> GetTimeRangeAsync(string catalogId, CancellationToken cancellationToken)
     {
         if (catalogId != "/A/B/C")
             throw new Exception("Unknown catalog identifier.");
@@ -107,7 +130,7 @@ public class Test : IDataSource
             .OrderBy(dateTime => dateTime)
             .ToList();
 
-        return Task.FromResult((dateTimes[0], dateTimes[^1]));
+        return Task.FromResult(new CatalogTimeRange(dateTimes[0], dateTimes[^1]));
     }
 
     public Task<double> GetAvailabilityAsync(string catalogId, DateTime begin, DateTime end, CancellationToken cancellationToken)

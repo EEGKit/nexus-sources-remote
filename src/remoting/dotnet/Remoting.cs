@@ -5,6 +5,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -63,11 +64,13 @@ public class RemoteCommunicator
 
     private readonly NetworkStream _dataStream;
 
-    private readonly Func<string, IDataSource> _getDataSource;
+    private readonly Func<string, Type> _getDataSourceType;
 
     private readonly Stopwatch _watchdogTimer = new();
 
     private ILogger _logger = default!;
+
+    private string? _sourceTypeName = default;
 
     private IDataSource? _dataSource = default;
 
@@ -76,17 +79,17 @@ public class RemoteCommunicator
     /// </summary>
     /// <param name="commStream">The network stream for communications.</param>
     /// <param name="dataStream">The network stream for data.</param>
-    /// <param name="getDataSource">A func to get a new data source instance by its type name.</param>
+    /// <param name="getDataSourceType">A func to get a new data source instance by its type name.</param>
     public RemoteCommunicator(
         NetworkStream commStream,
         NetworkStream dataStream,
-        Func<string, IDataSource> getDataSource
+        Func<string, Type> getDataSourceType
     )
     {
         _commStream = commStream;
         _dataStream = dataStream;
 
-        _getDataSource = getDataSource;
+        _getDataSourceType = getDataSourceType;
     }
 
     /// <summary>
@@ -103,7 +106,7 @@ public class RemoteCommunicator
         static JsonElement Read(Span<byte> jsonRequest)
         {
             var reader = new Utf8JsonReader(jsonRequest);
-            return JsonSerializer.Deserialize<JsonElement>(ref reader, Utilities.Options);
+            return JsonSerializer.Deserialize<JsonElement>(ref reader, Utilities.JsonSerializerOptions);
         }
 
         /* Make this method async as early as possible to not block the calling method.
@@ -191,64 +194,109 @@ public class RemoteCommunicator
         });
     }
 
-    private async Task<(JsonObject?, Memory<byte>, Memory<byte>)> ProcessInvocationAsync(JsonElement request, CancellationToken cancellationToken)
+    private async Task<(JsonNode?, Memory<byte>, Memory<byte>)> ProcessInvocationAsync(
+        JsonElement request, 
+        CancellationToken cancellationToken
+    )
     {
 #warning Use strongly typed deserialization instead?
 
-        JsonObject? result = default;
+        JsonNode? result = default;
         Memory<byte> data = default;
         Memory<byte> status = default;
 
         var methodName = request.GetProperty("method").GetString();
         var @params = request.GetProperty("params");
 
-        if (methodName == "getApiVersion")
+        if (methodName == "initialize")
         {
-            result = new JsonObject()
+            _sourceTypeName = @params[0].ToString();
+            result = 1; // API version
+        }
+
+        else if (methodName == "upgradeSourceConfiguration")
+        {
+            if (_sourceTypeName is null)
+                throw new Exception("The connection must be initialized with a type before invoking other methods.");
+
+            var dataSourceType = _getDataSourceType(_sourceTypeName);
+            var dataSourceInterfaceTypes = dataSourceType.GetInterfaces();
+            var configuration = @params[0];
+
+            if (dataSourceInterfaceTypes.Any(x => x == typeof(IUpgradableDataSource)))
             {
-                ["apiVersion"] = 1
-            };
+                var methodInfo = dataSourceType
+                    .GetMethod(
+                        nameof(IUpgradableDataSource.UpgradeSourceConfigurationAsync), 
+                        BindingFlags.Public | BindingFlags.Static
+                    )!;
+
+                var upgradedConfiguration = await (Task<JsonElement>)methodInfo.Invoke(
+                    default,
+                    [
+                        configuration,
+                        cancellationToken
+                    ]
+                )!;
+
+                result = JsonSerializer.SerializeToNode(upgradedConfiguration, Utilities.JsonSerializerOptions);
+            }
+
+            else
+            {
+                result = JsonSerializer.SerializeToNode(configuration, Utilities.JsonSerializerOptions);
+            }
         }
 
         else if (methodName == "setContext")
         {
-            var type = @params[0].ToString();
-            var rawContext = @params[1];
-            var resourceLocator = default(Uri?);
+            if (_sourceTypeName is null)
+                throw new Exception("The connection must be initialized with a type before invoking other methods.");
 
-            _dataSource = _getDataSource(type);
+            var rawContext = @params[0];
 
-            if (rawContext.TryGetProperty("resourceLocator", out var value))
-                resourceLocator = new Uri(value.GetString()!);
+            var context = JsonSerializer
+                .Deserialize<DataSourceContext<JsonElement>>(rawContext, Utilities.JsonSerializerOptions)!;
 
-            // system configuration
-            IReadOnlyDictionary<string, JsonElement>? systemConfiguration = default;
+            var logger = new Logger(_commStream, _watchdogTimer, cancellationToken);
+            var dataSourceType = _getDataSourceType(_sourceTypeName);
+            var dataSource = (IDataSource)Activator.CreateInstance(dataSourceType)!;
 
-            if (rawContext.TryGetProperty("systemConfiguration", out var systemConfigurationElement))
-                systemConfiguration = JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>?>(systemConfigurationElement);
+            /* Find generic parameter */
+            var dataSourceInterfaceTypes = dataSourceType.GetInterfaces();
 
-            // source configuration 
-            IReadOnlyDictionary<string, JsonElement>? sourceConfiguration = default;
+            var genericInterface = dataSourceInterfaceTypes
+                .FirstOrDefault(x =>
+                    x.IsGenericType &&
+                    x.GetGenericTypeDefinition() == typeof(IDataSource<>)
+                );
 
-            if (rawContext.TryGetProperty("sourceConfiguration", out var sourceConfigurationElement))
-                sourceConfiguration = JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>?>(sourceConfigurationElement);
+            if (genericInterface is null)
+                throw new Exception("Data sources must implement IDataSource<T>.");
 
-            // request configuration 
-            IReadOnlyDictionary<string, JsonElement>? requestConfiguration = default;
+            var configurationType = genericInterface.GenericTypeArguments[0];
 
-            if (rawContext.TryGetProperty("requestConfiguration", out var requestConfigurationElement))
-                requestConfiguration = JsonSerializer.Deserialize<IReadOnlyDictionary<string, JsonElement>?>(requestConfigurationElement);
+            /* Invoke SetContextAsync */
+            var methodInfo = typeof(RemoteCommunicator)
+                .GetMethod(nameof(SetContextAsync), BindingFlags.NonPublic | BindingFlags.Instance)!;
 
-            _logger = new Logger(_commStream, _watchdogTimer, cancellationToken);
+            var genericMethod = methodInfo
+                .MakeGenericMethod(configurationType);
 
-            var context = new DataSourceContext(
-                resourceLocator,
-                systemConfiguration,
-                sourceConfiguration,
-                requestConfiguration
-            );
+            await (Task)genericMethod.Invoke(
+                this,
+                [
+                    dataSource,
+                    context.ResourceLocator,
+                    context.SourceConfiguration,
+                    context.RequestConfiguration,
+                    logger,
+                    cancellationToken
+                ]
+            )!;
 
-            await _dataSource.SetContextAsync(context, _logger, cancellationToken);
+            _logger = logger;
+            _dataSource = dataSource;
         }
 
         else if (methodName == "getCatalogRegistrations")
@@ -259,10 +307,7 @@ public class RemoteCommunicator
             var path = @params[0].GetString()!;
             var registrations = await _dataSource.GetCatalogRegistrationsAsync(path, cancellationToken);
 
-            result = new JsonObject()
-            {
-                ["registrations"] = JsonSerializer.SerializeToNode(registrations, Utilities.Options)
-            };
+            result = JsonSerializer.SerializeToNode(registrations, Utilities.JsonSerializerOptions);
         }
 
         else if (methodName == "enrichCatalog")
@@ -270,13 +315,10 @@ public class RemoteCommunicator
             if (_dataSource is null)
                 throw new Exception("The data source context must be set before invoking other methods.");
 
-            var originalCatalog = JsonSerializer.Deserialize<ResourceCatalog>(@params[0], Utilities.Options)!;
+            var originalCatalog = JsonSerializer.Deserialize<ResourceCatalog>(@params[0], Utilities.JsonSerializerOptions)!;
             var catalog = await _dataSource.EnrichCatalogAsync(originalCatalog, cancellationToken);
 
-            result = new JsonObject()
-            {
-                ["catalog"] = JsonSerializer.SerializeToNode(catalog, Utilities.Options)
-            };
+            result = JsonSerializer.SerializeToNode(catalog, Utilities.JsonSerializerOptions);
         }
 
         else if (methodName == "getTimeRange")
@@ -309,10 +351,7 @@ public class RemoteCommunicator
 
             var availability = await _dataSource.GetAvailabilityAsync(catalogId, begin, end, cancellationToken);
 
-            result = new JsonObject()
-            {
-                ["availability"] = availability
-            };
+            result = availability;
         }
 
         else if (methodName == "readSingle")
@@ -328,7 +367,7 @@ public class RemoteCommunicator
 
             var originalResourceName = @params[2].GetString()!;
 
-            var catalogItem = JsonSerializer.Deserialize<CatalogItem>(@params[3], Utilities.Options)!;
+            var catalogItem = JsonSerializer.Deserialize<CatalogItem>(@params[3], Utilities.JsonSerializerOptions)!;
             (data, status) = ExtensibilityUtilities.CreateBuffers(catalogItem.Representation, begin, end);
             var readRequest = new ReadRequest(originalResourceName, catalogItem, data, status);
 
@@ -364,6 +403,24 @@ public class RemoteCommunicator
             throw new Exception($"Unknown method '{methodName}'.");
 
         return (result, data, status);
+    }
+
+    private Task SetContextAsync<T>(
+        IDataSource<T?> dataSource,
+        Uri? resourceLocator,
+        JsonElement sourceConfiguration,
+        IReadOnlyDictionary<string, JsonElement>? requestConfiguration,
+        ILogger logger,
+        CancellationToken cancellationToken
+    )
+    {
+        var context = new DataSourceContext<T?>(
+            ResourceLocator: resourceLocator,
+            SourceConfiguration: JsonSerializer.Deserialize<T>(sourceConfiguration, Utilities.JsonSerializerOptions),
+            RequestConfiguration: requestConfiguration
+        );
+
+        return dataSource.SetContextAsync(context, logger, cancellationToken);
     }
 
     private async Task HandleReadDataAsync(
@@ -419,20 +476,20 @@ internal static class Utilities
 
     static Utilities()
     {
-        Options = new JsonSerializerOptions()
+        JsonSerializerOptions = new JsonSerializerOptions()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
-
-        Options.Converters.Add(new JsonStringEnumConverter());
-        Options.Converters.Add(new RoundtripDateTimeConverter());
+        
+        JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        JsonSerializerOptions.Converters.Add(new RoundtripDateTimeConverter());
     }
 
-    public static JsonSerializerOptions Options { get; }
+    public static JsonSerializerOptions JsonSerializerOptions { get; }
 
     public static async Task SendToServerAsync(JsonNode response, NetworkStream currentStream, CancellationToken cancellationToken)
     {
-        var encodedResponse = JsonSerializer.SerializeToUtf8Bytes(response, Options);
+        var encodedResponse = JsonSerializer.SerializeToUtf8Bytes(response, JsonSerializerOptions);
         var messageLength = BitConverter.GetBytes(encodedResponse.Length);
         Array.Reverse(messageLength);
 

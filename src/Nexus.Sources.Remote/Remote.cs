@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Nexus.DataModel;
 using Nexus.Extensibility;
 using System.Buffers;
@@ -8,11 +9,17 @@ using System.Text.RegularExpressions;
 
 namespace Nexus.Sources;
 
+public record RemoteSettings(
+    Uri RemoteUrl,
+    string RemoteType,
+    JsonElement RemoteConfiguration
+);
+
 [ExtensionDescription(
     "Provides access to remote databases",
     "https://github.com/nexus-main/nexus-sources-remote",
     "https://github.com/nexus-main/nexus-sources-remote")] 
-public partial class Remote : IDataSource, IDisposable
+public partial class Remote : IDataSource<RemoteSettings>, IUpgradableDataSource, IDisposable
 {
     private const int DEFAULT_AGENT_PORT = 56145;
 
@@ -41,109 +48,104 @@ public partial class Remote : IDataSource, IDisposable
      *      - ...
      */
 
-    private DataSourceContext Context { get; set; } = default!;
+    private DataSourceContext<RemoteSettings> Context { get; set; } = default!;
+
+    public static async Task<JsonElement> UpgradeSourceConfigurationAsync(
+        JsonElement configuration,
+        CancellationToken cancellationToken
+    )
+    {
+        var thisConfiguration = JsonSerializer
+            .Deserialize<RemoteSettings>(configuration, Utilities.JsonSerializerOptions)!;
+
+        var (communicator, rpcServer) = await CreateRemoteCommunicatorAsync(
+            thisConfiguration.RemoteUrl,
+            thisConfiguration.RemoteType,
+            (_, _, _) => throw new Exception("This should never happen."),
+            NullLogger.Instance,
+            cancellationToken
+        );
+
+        using var comm = communicator;
+
+        var upgradedRemoteConfiguration = await rpcServer.UpgradeSourceConfigurationAsync(
+            thisConfiguration.RemoteConfiguration,
+            cancellationToken
+        );
+
+        var upgradedThisConfiguration = thisConfiguration with 
+        { 
+            RemoteConfiguration = upgradedRemoteConfiguration 
+        };
+
+        return JsonSerializer.SerializeToElement(upgradedThisConfiguration, Utilities.JsonSerializerOptions);
+    }
 
     public async Task SetContextAsync(
-        DataSourceContext context,
+        DataSourceContext<RemoteSettings> context,
         ILogger logger,
         CancellationToken cancellationToken)
     {
         Context = context;
 
-        // Host and port
-        if (context.ResourceLocator is null || context.ResourceLocator.Scheme != "tcp")
-            throw new ArgumentException("The resource locator parameter URI must be set with the 'tcp' scheme.");
-
-        var host = context.ResourceLocator.Host;
-        var port = context.ResourceLocator.Port;
-
-        if (port == -1)
-            port = DEFAULT_AGENT_PORT;
-
-        // Type
-        var type = Context.SourceConfiguration?.GetStringValue("type") ?? throw new Exception("The data source type is missing.");
-
-        // Resource locator
-        var resourceLocatorString = Context.SourceConfiguration?.GetStringValue("resourceLocator");
-        var resourceLocator = default(Uri);
-
-        if (resourceLocatorString is not null && !Uri.TryCreate(resourceLocatorString, UriKind.Absolute, out resourceLocator))
-            throw new ArgumentException("The resource locator parameter is not a valid URI.");
-
-        // Source configuration
-        var sourceConfigurationJsonElement = Context.SourceConfiguration?.GetValueOrDefault("sourceConfiguration");
-
-        var sourceConfiguration = sourceConfigurationJsonElement.HasValue && sourceConfigurationJsonElement.Value.ValueKind == JsonValueKind.Object
-
-            ? JsonSerializer
-                .Deserialize<IReadOnlyDictionary<string, JsonElement>>(sourceConfigurationJsonElement.Value)
-
-            : JsonSerializer
-                .Deserialize<IReadOnlyDictionary<string, JsonElement>>("{}");
-
-        // Remote communicator
-        _communicator = new RemoteCommunicator(
-            host,
-            port,
+        (_communicator, _rpcServer) = await CreateRemoteCommunicatorAsync(
+            context.SourceConfiguration.RemoteUrl, 
+            context.SourceConfiguration.RemoteType,
             HandleReadDataAsync,
-            logger
+            logger,
+            cancellationToken
         );
 
-        var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
-        cancellationToken.Register(timeoutTokenSource.Cancel);
-
-        _rpcServer = await _communicator.ConnectAsync(timeoutTokenSource.Token);
-
-        var apiVersion = (await _rpcServer.GetApiVersionAsync(timeoutTokenSource.Token)).ApiVersion;
-
-        if (apiVersion < 1 || apiVersion > API_LEVEL)
-            throw new Exception($"The API level '{apiVersion}' is not supported.");
-
-        // Set context
         logger.LogTrace("Set context to remote client");
 
-        var subContext = new DataSourceContext(
+        var resourceLocator = Context.ResourceLocator;
+        var sourceConfiguration = context.SourceConfiguration.RemoteConfiguration;
+
+        var subContext = new DataSourceContext<JsonElement>(
             resourceLocator,
-            context.SystemConfiguration,
             sourceConfiguration,
             context.RequestConfiguration
         );
 
-        await _rpcServer
-            .SetContextAsync(type, subContext, timeoutTokenSource.Token);
+        var timeoutTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+
+        await _rpcServer.SetContextAsync(
+            subContext, 
+            timeoutTokenSource.Token
+        );
     }
 
     public async Task<CatalogRegistration[]> GetCatalogRegistrationsAsync(
         string path,
         CancellationToken cancellationToken)
     {
-        var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+        var timeoutTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
         cancellationToken.Register(timeoutTokenSource.Cancel);
 
-        var response = await _rpcServer
+        var registrations = await _rpcServer
             .GetCatalogRegistrationsAsync(path, timeoutTokenSource.Token);
 
-        return response.Registrations;
+        return registrations;
     }
 
     public async Task<ResourceCatalog> EnrichCatalogAsync(
         ResourceCatalog catalog,
         CancellationToken cancellationToken)
     {
-        var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+        var timeoutTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
         cancellationToken.Register(timeoutTokenSource.Cancel);
 
-        var response = await _rpcServer
+        var newCatalog = await _rpcServer
             .EnrichCatalogAsync(catalog, timeoutTokenSource.Token);
 
-        return response.Catalog;
+        return newCatalog;
     }
 
-    public async Task<(DateTime Begin, DateTime End)> GetTimeRangeAsync(
+    public async Task<CatalogTimeRange> GetTimeRangeAsync(
         string catalogId,
         CancellationToken cancellationToken)
     {
-        var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+        var timeoutTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
         cancellationToken.Register(timeoutTokenSource.Cancel);
 
         var response = await _rpcServer
@@ -152,7 +154,7 @@ public partial class Remote : IDataSource, IDisposable
         var begin = response.Begin.ToUniversalTime();
         var end = response.End.ToUniversalTime();
 
-        return (begin, end);
+        return new CatalogTimeRange(begin, end);
     }
 
     public async Task<double> GetAvailabilityAsync(
@@ -161,13 +163,13 @@ public partial class Remote : IDataSource, IDisposable
         DateTime end,
         CancellationToken cancellationToken)
     {
-        var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+        var timeoutTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
         cancellationToken.Register(timeoutTokenSource.Cancel);
 
-        var response = await _rpcServer
+        var availability = await _rpcServer
             .GetAvailabilityAsync(catalogId, begin, end, timeoutTokenSource.Token);
 
-        return response.Availability;
+        return availability;
     }
 
     public async Task ReadAsync(
@@ -188,7 +190,7 @@ public partial class Remote : IDataSource, IDisposable
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+                var timeoutTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
                 cancellationToken.Register(timeoutTokenSource.Cancel);
 
                 var elementCount = data.Length / catalogItem.Representation.ElementSize;
@@ -208,8 +210,46 @@ public partial class Remote : IDataSource, IDisposable
         }
     }
 
+    private static async Task<(RemoteCommunicator, IJsonRpcServer)> CreateRemoteCommunicatorAsync(
+        Uri remoteUrl,
+        string remoteType,
+        Func<string, DateTime, DateTime, Task> readData,
+        ILogger logger,
+        CancellationToken cancellationToken
+    )
+    {
+        if (remoteUrl is null || remoteUrl.Scheme != "tcp")
+            throw new ArgumentException("The resource locator parameter URI must be set with the 'tcp' scheme.");
+
+        var host = remoteUrl.Host;
+        var port = remoteUrl.Port;
+
+        if (port == -1)
+            port = DEFAULT_AGENT_PORT;
+
+        var communicator = new RemoteCommunicator(
+            host,
+            port,
+            readData,
+            logger
+        );
+
+        var timeoutTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+        cancellationToken.Register(timeoutTokenSource.Cancel);
+
+        var rpcServer = await communicator.ConnectAsync(timeoutTokenSource.Token);
+        var apiVersion = await rpcServer.InitializeAsync(remoteType, timeoutTokenSource.Token);
+
+        if (apiVersion < 1 || apiVersion > API_LEVEL)
+            throw new Exception($"The API level '{apiVersion}' is not supported.");
+
+        return (communicator, rpcServer);
+    }
+
     // copy from Nexus -> DataModelUtilities
-    private static readonly Regex _resourcePathEvaluator = MyRegex();
+
+    [GeneratedRegex(@"^(?'catalog'.*)\/(?'resource'.*)\/(?'sample_period'[0-9]+_[a-zA-Z]+)(?:_(?'kind'[^\(#\s]+))?(?:\((?'parameters'.*)\))?(?:#(?'fragment'.*))?$", RegexOptions.Compiled)]
+    private partial Regex ResourcePathEvaluator { get; }
 
     private static readonly MethodInfo _toSamplePeriodMethodInfo = typeof(DataModelExtensions)
         .GetMethod("ToSamplePeriod", BindingFlags.Static | BindingFlags.NonPublic) ?? throw new Exception("Unable to locate ToSamplePeriod method.");
@@ -220,10 +260,10 @@ public partial class Remote : IDataSource, IDisposable
         var localReadData = _readData ?? throw new InvalidOperationException("Unable to read data without previous invocation of the ReadAsync method.");
 
         // timeout token source
-        var timeoutTokenSource = GetTimeoutTokenSource(TimeSpan.FromMinutes(1));
+        var timeoutTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
 
         // find sample period
-        var match = _resourcePathEvaluator.Match(resourcePath);
+        var match = ResourcePathEvaluator.Match(resourcePath);
 
         if (!match.Success)
             throw new Exception("Invalid resource path");
@@ -244,14 +284,6 @@ public partial class Remote : IDataSource, IDisposable
 
         // write to communicator
         await _communicator.WriteRawAsync(byteBuffer, timeoutTokenSource.Token);
-    }
-
-    private static CancellationTokenSource GetTimeoutTokenSource(TimeSpan timeout)
-    {
-        var timeoutToken = new CancellationTokenSource();
-        timeoutToken.CancelAfter(timeout);
-
-        return timeoutToken;
     }
 
     #region IDisposable
@@ -276,11 +308,6 @@ public partial class Remote : IDataSource, IDisposable
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
-
-    [GeneratedRegex("{(.*?)}")]
-    private static partial Regex CommandRegex();
-    [GeneratedRegex(@"^(?'catalog'.*)\/(?'resource'.*)\/(?'sample_period'[0-9]+_[a-zA-Z]+)(?:_(?'kind'[^\(#\s]+))?(?:\((?'parameters'.*)\))?(?:#(?'fragment'.*))?$", RegexOptions.Compiled)]
-    private static partial Regex MyRegex();
 
     #endregion
 }
