@@ -2,6 +2,7 @@ import asyncio
 import json
 import struct
 import time
+import typing
 from datetime import datetime, timedelta
 from typing import Any, Awaitable, Callable, Dict, Optional, Tuple, cast
 from urllib.parse import urlparse
@@ -181,10 +182,14 @@ class RemoteCommunicator:
             resource_locator_string = cast(str, raw_context["resourceLocator"]) if "resourceLocator" in raw_context else None
             resource_locator = None if resource_locator_string is None else urlparse(resource_locator_string)
 
-            self._data_source = cast(IDataSource, self._get_data_source_type(self._source_type_name)())
+            data_source_type = self._get_data_source_type(self._source_type_name)
 
             # TODO: Python 3.12: https://stackoverflow.com/a/78818079/1636629
-            configuration_type = self._data_source.__class__.__orig_bases__[0].__args__[0] # pyright: ignore
+            # typing.get_origin: https://stackoverflow.com/q/76494580/1636629
+            data_source_base_type = next(base_type for base_type in data_source_type.__orig_bases__ if \
+                issubclass(typing.get_origin(base_type) or base_type, IDataSource))
+            
+            configuration_type = data_source_base_type.__args__[0] # pyright: ignore
 
             encoded_source_configuration = raw_context["sourceConfiguration"] \
                 if "sourceConfiguration" in raw_context else None
@@ -206,6 +211,7 @@ class RemoteCommunicator:
                 request_configuration
             )
 
+            self._data_source = cast(IDataSource, data_source_type())
             await self._data_source.set_context(context, self._logger)
 
         elif method_name == "getCatalogRegistrations":
