@@ -2,7 +2,7 @@ import glob
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Awaitable, Callable
+from typing import Any, Callable
 from urllib.request import url2pathname
 
 from nexus_extensibility import (CatalogRegistration, CatalogTimeRange,
@@ -17,14 +17,20 @@ from nexus_extensibility import (CatalogRegistration, CatalogTimeRange,
 class TestSettings():
     log_message: str
 
-class Test(IDataSource[TestSettings], IUpgradableDataSource):
+class TestBase(IUpgradableDataSource):
+
+    @staticmethod
+    async def upgrade_source_configuration(configuration: Any) -> Any:
+        configuration["foo"] = configuration["logMessage"]
+
+class Test(TestBase, IDataSource[TestSettings], IUpgradableDataSource):
     
     _root: str
 
     @staticmethod
     async def upgrade_source_configuration(configuration: Any) -> Any:
 
-        configuration["foo"] = configuration["logMessage"]
+        configuration["bar"] = configuration["logMessage"]
         
         return configuration
 

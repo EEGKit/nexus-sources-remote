@@ -12,21 +12,38 @@ public record TestSettings(
     string LogMessage
 );
 
-/* Note: Inherit from StructuredFileDataSource would be possible 
- * but collides with ReadAndModifyNexusData method
- */
-public class Test : IDataSource<TestSettings>, IUpgradableDataSource
+public class TestBase : IUpgradableDataSource
 {
-    private DataSourceContext<TestSettings> _context = default!;
-
     public static Task<JsonElement> UpgradeSourceConfigurationAsync(
-        JsonElement configuration,
+        JsonElement configuration, 
         CancellationToken cancellationToken
     )
     {
         var jsonNode = JsonSerializer.SerializeToNode(configuration)!;
 
         jsonNode["foo"] = jsonNode["logMessage"]!.DeepClone();
+
+        var upgradedConfiguration = JsonSerializer.SerializeToElement(jsonNode, JsonSerializerOptions.Web);
+
+        return Task.FromResult(upgradedConfiguration);
+    }
+}
+
+/* Note: Inherit from StructuredFileDataSource would be possible 
+ * but collides with ReadAndModifyNexusData method
+ */
+public class Test : TestBase, IDataSource<TestSettings>, IUpgradableDataSource
+{
+    private DataSourceContext<TestSettings> _context = default!;
+
+    public static new Task<JsonElement> UpgradeSourceConfigurationAsync(
+        JsonElement configuration,
+        CancellationToken cancellationToken
+    )
+    {
+        var jsonNode = JsonSerializer.SerializeToNode(configuration)!;
+
+        jsonNode["bar"] = jsonNode["logMessage"]!.DeepClone();
 
         var upgradedConfiguration = JsonSerializer.SerializeToElement(jsonNode, JsonSerializerOptions.Web);
 
