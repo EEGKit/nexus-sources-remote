@@ -50,7 +50,7 @@ public partial class Remote : IDataSource<RemoteSettings>, IUpgradableDataSource
 
     private DataSourceContext<RemoteSettings> Context { get; set; } = default!;
 
-    public static async Task<JsonElement> UpgradeSourceConfigurationAsync(
+    public async Task<JsonElement> UpgradeSourceConfigurationAsync(
         JsonElement configuration,
         CancellationToken cancellationToken
     )

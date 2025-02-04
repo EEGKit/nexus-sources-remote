@@ -40,7 +40,7 @@ public class RemoteTests(RemoteTestsFixture fixture)
         var configuration = CreateSettings(language);
 
         // Act
-        var upgradedConfiguration = await Remote.UpgradeSourceConfigurationAsync(
+        var upgradedConfiguration = await new Remote().UpgradeSourceConfigurationAsync(
             JsonSerializer.SerializeToElement(configuration, Utilities.JsonSerializerOptions),
             CancellationToken.None
         );

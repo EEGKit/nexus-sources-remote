@@ -1,3 +1,4 @@
+from abc import abstractmethod
 import glob
 import os
 from dataclasses import dataclass
@@ -19,17 +20,17 @@ class TestSettings():
 
 class TestBase(IUpgradableDataSource):
 
-    @staticmethod
-    async def upgrade_source_configuration(configuration: Any) -> Any:
+    @abstractmethod
+    async def upgrade_source_configuration(self, configuration: Any) -> Any:
         configuration["foo"] = configuration["logMessage"]
 
-class Test(TestBase, IDataSource[TestSettings], IUpgradableDataSource):
+class Test(TestBase, IDataSource[TestSettings]):
     
     _root: str
 
-    @staticmethod
-    async def upgrade_source_configuration(configuration: Any) -> Any:
+    async def upgrade_source_configuration(self, configuration: Any) -> Any:
 
+        await super().upgrade_source_configuration(configuration)
         configuration["bar"] = configuration["logMessage"]
         
         return configuration

@@ -165,11 +165,11 @@ class RemoteCommunicator:
                 raise Exception("The connection must be initialized with a type before invoking other methods.")
             
             data_source_type = self._get_data_source_type(self._source_type_name)
+            upgraded_configuration = params[0]
 
-            upgraded_configuration = await self.internal_upgrade_all(
-                data_source_type,
-                params[0]
-            )
+            if issubclass(data_source_type, IUpgradableDataSource):
+                upgradable_data_source = cast(IUpgradableDataSource, data_source_type())
+                upgraded_configuration = await upgradable_data_source.upgrade_source_configuration(params[0])
 
             result = upgraded_configuration
 
@@ -326,37 +326,6 @@ class RemoteCommunicator:
         size = struct.unpack(">I", size_buffer)[0]
 
         return size
-
-    async def internal_upgrade_all(self, source_type: type, configuration: Any):
-
-        # Collect potential types in the inheritance chain
-        upgradable_data_source_types: list[type[IUpgradableDataSource]] = []
-        current_type = source_type
-
-        # The following implementation just follows the first base type
-        # which is not IDataSource or IUpgradableDataSource
-        while not (current_type is None):
-
-            if issubclass(current_type, IUpgradableDataSource) and IUpgradableDataSource in current_type.__bases__:
-                upgradable_data_source_types.append(current_type)
-
-            current_type = next(
-                (
-                    base for base in current_type.__bases__ \
-                        if base is not IDataSource and base is not IUpgradableDataSource
-                ),
-                None
-            ) 
-
-        upgradable_data_source_types.reverse()
-
-        # Invoke upgrade_source_configuration
-        upgraded_configuration = configuration
-
-        for current_type in upgradable_data_source_types:
-            upgraded_configuration = await current_type.upgrade_source_configuration(configuration)
-
-        return upgraded_configuration
 
 async def _send_to_server(message: Any, writer: asyncio.StreamWriter):
 

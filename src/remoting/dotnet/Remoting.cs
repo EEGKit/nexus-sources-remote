@@ -220,12 +220,18 @@ public class RemoteCommunicator
                 throw new Exception("The connection must be initialized with a type before invoking other methods.");
 
             var dataSourceType = _getDataSourceType(_sourceTypeName);
-            var configuration = @params[0];
+            var upgradedConfiguration = @params[0];
 
-            var upgradedConfiguration = await InternalUpgradeAllAsync(
-                dataSourceType,
-                @params[0]
-            );
+            if (dataSourceType.IsAssignableTo(dataSourceType))
+            {
+                var upgradableDataSource = (IUpgradableDataSource)Activator.CreateInstance(dataSourceType)!;
+                var timeoutTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+
+                upgradedConfiguration = await upgradableDataSource.UpgradeSourceConfigurationAsync(
+                    @params[0],
+                    timeoutTokenSource.Token
+                );
+            }
 
             result = JsonSerializer.SerializeToNode(upgradedConfiguration, Utilities.JsonSerializerOptions);
         }
@@ -449,56 +455,6 @@ public class RemoteCommunicator
 
         var size = BitConverter.ToInt32(sizeBuffer);
         return size;
-    }
-
-    /* Copy of Nexus.Services.UpgradeConfigurationService.InternalUpgradeAllAsync */
-    private static async Task<JsonElement> InternalUpgradeAllAsync(
-        Type sourceType,
-        JsonElement configuration
-    )
-    {
-        /* Collect potential types in the inheritance chain */
-        var upgradableDataSourceTypes = new List<Type>();
-        var currentType1 = sourceType;
-
-        while (!(currentType1 is null || currentType1 == typeof(object)))
-        {
-            var interfaceTypes = currentType1.GetInterfaces();
-
-            if (interfaceTypes.Contains(typeof(IUpgradableDataSource)))
-                upgradableDataSourceTypes.Add(currentType1);
-
-            currentType1 = currentType1.BaseType;
-        }
-
-        upgradableDataSourceTypes.Reverse();
-
-        /* Invoke UpgradeSourceConfigurationAsync */
-        var upgradedConfiguration = configuration;
-
-        foreach (var currentType2 in upgradableDataSourceTypes)
-        {
-            var timeoutTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
-
-            var methodInfo = currentType2
-                .GetMethod(nameof(IUpgradableDataSource.UpgradeSourceConfigurationAsync), BindingFlags.Public | BindingFlags.Static)!;
-
-            /* This happens when base class implements IUpgradableDataSource and
-             * sub class does not reimplement it, which is fine.
-             */
-            if (methodInfo is null)
-                continue;
-
-            upgradedConfiguration = await (Task<JsonElement>)methodInfo.Invoke(
-                default,
-                [
-                    upgradedConfiguration,
-                    timeoutTokenSource.Token
-                ]
-            )!;
-        }
-
-        return upgradedConfiguration;
     }
 }
 

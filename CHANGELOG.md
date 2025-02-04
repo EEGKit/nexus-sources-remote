@@ -1,3 +1,7 @@
+## v2.0.0-beta.54 - 2025-02-04
+
+- Follow Nexus changes
+
 ## v2.0.0-beta.53 - 2025-02-03
 
 - Fix version

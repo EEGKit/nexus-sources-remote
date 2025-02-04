@@ -14,15 +14,13 @@ public record TestSettings(
 
 public class TestBase : IUpgradableDataSource
 {
-    public static Task<JsonElement> UpgradeSourceConfigurationAsync(
+    public virtual Task<JsonElement> UpgradeSourceConfigurationAsync(
         JsonElement configuration, 
         CancellationToken cancellationToken
     )
     {
         var jsonNode = JsonSerializer.SerializeToNode(configuration)!;
-
         jsonNode["foo"] = jsonNode["logMessage"]!.DeepClone();
-
         var upgradedConfiguration = JsonSerializer.SerializeToElement(jsonNode, JsonSerializerOptions.Web);
 
         return Task.FromResult(upgradedConfiguration);
@@ -32,22 +30,21 @@ public class TestBase : IUpgradableDataSource
 /* Note: Inherit from StructuredFileDataSource would be possible 
  * but collides with ReadAndModifyNexusData method
  */
-public class Test : TestBase, IDataSource<TestSettings>, IUpgradableDataSource
+public class Test : TestBase, IDataSource<TestSettings>
 {
     private DataSourceContext<TestSettings> _context = default!;
 
-    public static new Task<JsonElement> UpgradeSourceConfigurationAsync(
+    public override async Task<JsonElement> UpgradeSourceConfigurationAsync(
         JsonElement configuration,
         CancellationToken cancellationToken
     )
     {
+        configuration = await base.UpgradeSourceConfigurationAsync(configuration, cancellationToken);
         var jsonNode = JsonSerializer.SerializeToNode(configuration)!;
-
         jsonNode["bar"] = jsonNode["logMessage"]!.DeepClone();
-
         var upgradedConfiguration = JsonSerializer.SerializeToElement(jsonNode, JsonSerializerOptions.Web);
 
-        return Task.FromResult(upgradedConfiguration);
+        return upgradedConfiguration;
     }
 
     public Task SetContextAsync(
