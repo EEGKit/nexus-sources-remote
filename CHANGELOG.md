@@ -1,3 +1,7 @@
+## v2.0.0-beta.55 - 2025-02-07
+
+- Fix invalid dataSourceType.IsAssignableTo check
+
 ## v2.0.0-beta.54 - 2025-02-04
 
 - Follow Nexus changes
