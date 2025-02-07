@@ -222,7 +222,7 @@ public class RemoteCommunicator
             var dataSourceType = _getDataSourceType(_sourceTypeName);
             var upgradedConfiguration = @params[0];
 
-            if (dataSourceType.IsAssignableTo(dataSourceType))
+            if (dataSourceType.IsAssignableTo(typeof(IUpgradableDataSource)))
             {
                 var upgradableDataSource = (IUpgradableDataSource)Activator.CreateInstance(dataSourceType)!;
                 var timeoutTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
