@@ -1,3 +1,7 @@
+## v2.0.0-beta.57 - 2025-02-14
+
+- Fix deserialization of pipelines
+
 ## v2.0.0-beta.56 - 2025-02-14
 
 - Add support for package reference updates
